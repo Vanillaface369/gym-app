@@ -10,6 +10,7 @@ import { ExerciseThumb, Sheet } from '../../components/ui';
 import { IconCheck, IconChevronRight, IconEdit } from '../../components/icons';
 import { Sparkline } from '../progress/E1rmChart';
 import { Recovery } from './Recovery';
+import { StrengthSummary } from '../strength/StrengthSummary';
 import { loadProgress, type ExerciseProgress } from '../progress/data';
 
 export function BodyTab() {
@@ -42,10 +43,7 @@ function Results() {
 
   return (
     <>
-      <div className="mt-6 rounded-2xl bg-surface p-4">
-        <p className="font-semibold">Strength score</p>
-        <p className="mt-1 text-sm text-muted">Your overall and Push / Pull / Legs scores arrive in stage 6.</p>
-      </div>
+      <StrengthSummary />
 
       <section className="mt-6">
         <div className="flex items-center justify-between">

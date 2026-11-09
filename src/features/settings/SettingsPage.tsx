@@ -5,7 +5,7 @@ import { downloadBackup, importAll, resetAll } from '../../db/backup';
 import { useSettings } from '../../lib/hooks';
 import { fmtClock, fromDisplay, toDisplay } from '../../lib/format';
 import { Confirm, PageHeader } from '../../components/ui';
-import { IconChevronLeft, IconDownload, IconTrash, IconUpload } from '../../components/icons';
+import { IconChevronLeft, IconDownload, IconTrash, IconTrophy, IconUpload } from '../../components/icons';
 
 export function SettingsPage() {
   const s = useSettings();
@@ -57,6 +57,10 @@ export function SettingsPage() {
           <Row label="Keep screen on during workouts" hint="So the timer can beep and buzz">
             <Toggle on={s.keepScreenOn} onChange={(v) => updateSettings({ keepScreenOn: v })} />
           </Row>
+        </Section>
+
+        <Section title="Progress">
+          <ActionRow icon={<IconTrophy size={20} />} label="Workout Report" hint="Muscle strength and volume" onClick={() => nav('/report')} />
         </Section>
 
         <Section title="Your data">

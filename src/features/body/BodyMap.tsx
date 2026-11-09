@@ -12,23 +12,27 @@ export function BodyMap({ side, colour, pick, selected, onSelect }: {
   colour: (m: Muscle) => string;
   pick: (muscles: Muscle[]) => Muscle;
   selected: Muscle | null;
-  onSelect: (m: Muscle) => void;
+  /** Leave out for a static picture (no tapping). */
+  onSelect?: (m: Muscle) => void;
 }) {
   const fig = side === 'front' ? FRONT : BACK;
   const regions = fig.regions.map((r) => ({ ...r, m: pick(r.muscles) }));
   // The selected region is drawn last so its outline sits on top.
   regions.sort((a, b) => Number(a.muscles.includes(selected!)) - Number(b.muscles.includes(selected!)));
   return (
-    <svg viewBox={VIEWBOX} className="h-full w-full" role="group" aria-label={`Body map, ${side}`}>
+    <svg viewBox={VIEWBOX} className="h-full w-full" {...(onSelect ? { role: 'group', 'aria-label': `Body map, ${side}` } : { 'aria-hidden': true })}>
       <path d={fig.body} fill="var(--color-body)" />
       {regions.map((r) => {
         const sel = selected !== null && r.muscles.includes(selected);
         const label = r.muscles.map((m) => MUSCLE_LABEL[m]).join(' / ');
         return (
-          <path key={r.muscles.join()} d={r.d} role="button" aria-label={label} tabIndex={0}
-            className="cursor-pointer outline-none" fill={colour(r.m)}
+          <path key={r.muscles.join()} d={r.d} fill={colour(r.m)}
             stroke={sel ? 'var(--color-ink)' : 'none'} strokeWidth={sel ? 4 : 0} strokeLinejoin="round"
-            onClick={() => onSelect(r.m)} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.m)} />
+            {...(onSelect && {
+              role: 'button', 'aria-label': label, tabIndex: 0, className: 'cursor-pointer outline-none',
+              onClick: () => onSelect(r.m),
+              onKeyDown: (e: React.KeyboardEvent) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.m),
+            })} />
         );
       })}
     </svg>
