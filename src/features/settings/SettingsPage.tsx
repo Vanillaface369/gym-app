@@ -1,10 +1,11 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { updateSettings } from '../../db/actions';
 import { downloadBackup, importAll, resetAll } from '../../db/backup';
 import { useSettings } from '../../lib/hooks';
 import { fmtClock, fromDisplay, toDisplay } from '../../lib/format';
 import { Confirm, PageHeader } from '../../components/ui';
+import { ActionRow, Row, Section, Segmented, Toggle } from '../../components/form';
 import { IconChevronLeft, IconDownload, IconTrash, IconTrophy, IconUpload } from '../../components/icons';
 
 export function SettingsPage() {
@@ -97,59 +98,6 @@ export function SettingsPage() {
         body="Deletes every workout and change you've made and restores the starting exercises and templates. Export a backup first if you might want it back."
         onCancel={() => setConfirmReset(false)}
         onConfirm={async () => { setConfirmReset(false); await resetAll(); setMsg({ text: 'All data reset.' }); }} />
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section>
-      <h2 className="mb-2 px-1 text-xs font-semibold tracking-wider text-muted uppercase">{title}</h2>
-      <div className="divide-y divide-line rounded-2xl bg-surface px-3">{children}</div>
-    </section>
-  );
-}
-
-function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return (
-    <div className="flex min-h-14 items-center justify-between gap-3 py-2">
-      <div>
-        <p>{label}</p>
-        {hint && <p className="text-xs text-muted">{hint}</p>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function ActionRow({ icon, label, hint, onClick, danger, disabled }: { icon: ReactNode; label: string; hint?: string; onClick?: () => void; danger?: boolean; disabled?: boolean }) {
-  return (
-    <button disabled={disabled} onClick={onClick} className={`flex min-h-14 w-full items-center gap-3 py-2 text-left disabled:opacity-40 ${danger ? 'text-danger' : ''}`}>
-      <span className={danger ? '' : 'text-muted'}>{icon}</span>
-      <span>
-        <span className="block">{label}</span>
-        {hint && <span className="block text-xs text-muted">{hint}</span>}
-      </span>
-    </button>
-  );
-}
-
-function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button role="switch" aria-checked={on} onClick={() => onChange(!on)}
-      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${on ? 'bg-accent' : 'bg-surface-2'}`}>
-      <span className={`absolute top-0.5 h-6 w-6 rounded-full bg-white transition-all ${on ? 'left-[1.375rem]' : 'left-0.5'}`} />
-    </button>
-  );
-}
-
-function Segmented<T extends string>({ value, options, onChange }: { value: T; options: [T, string][]; onChange: (v: T) => void }) {
-  return (
-    <div className="flex rounded-lg bg-surface-2 p-0.5">
-      {options.map(([v, label]) => (
-        <button key={v} onClick={() => onChange(v)}
-          className={`rounded-md px-3.5 py-1.5 text-sm font-medium ${value === v ? 'bg-accent text-accent-ink' : 'text-muted'}`}>{label}</button>
-      ))}
     </div>
   );
 }

@@ -1,14 +1,22 @@
 import { useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
-import { createTemplate, importWorkoutJson, updateSettings } from '../../db/actions';
-import type { WorkoutTemplate } from '../../db/types';
+import { createTemplate, generateWorkout, importWorkoutJson, updateSettings, pickGenerated } from '../../db/actions';
+import { MUSCLES, type Muscle, type SplitDay, type WorkoutTemplate } from '../../db/types';
+import { useSettings } from '../../lib/hooks';
+import { MUSCLE_LABEL } from '../../lib/format';
+import { DAY_LABEL, dayMuscles, splitDays } from '../../lib/generate';
+import { GROUP_MUSCLES } from '../../lib/targets';
+import { ToggleChip } from '../../components/form';
 import { Confirm, Sheet, SheetRow, CATEGORY_COLOUR } from '../../components/ui';
-import { IconEdit, IconList, IconPlus, IconTarget, IconTrash, IconUpload } from '../../components/icons';
+import { IconEdit, IconList, IconPlus, IconRotate, IconTarget, IconTrash, IconUpload } from '../../components/icons';
 
-type View = 'main' | 'saved' | 'create' | 'import';
+type View = 'main' | 'saved' | 'create' | 'import' | 'muscles';
 
-export function SwitchSheet({ open, onClose, currentId }: { open: boolean; onClose: () => void; currentId?: string }) {
+export function SwitchSheet({ open, onClose, currentId, current }: { open: boolean; onClose: () => void; currentId?: string; current: WorkoutTemplate | null }) {
+  const settings = useSettings();
+  const [muscles, setMuscles] = useState<Muscle[]>([]);
+  const [busy, setBusy] = useState(false);
   const templates = useLiveQuery(() => db.templates.toArray(), []) ?? [];
   const [view, setView] = useState<View>('main');
   const [name, setName] = useState('');
@@ -17,11 +25,19 @@ export function SwitchSheet({ open, onClose, currentId }: { open: boolean; onClo
   const [toDelete, setToDelete] = useState<WorkoutTemplate | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const splits = ['push', 'pull', 'legs']
-    .map((d) => templates.find((t) => t.splitDay === d))
-    .filter((t): t is WorkoutTemplate => !!t);
+  // Each day in the split: its saved template, or a workout generated when picked.
+  const days = splitDays(settings.split).map((day) => ({ day, template: templates.find((t) => t.splitDay === day) }));
+  const generate = async (opts: { muscles: Muscle[]; name: string; splitDay: SplitDay }) => {
+    setBusy(true);
+    try { await pickGenerated(await generateWorkout(opts)); close(); } finally { setBusy(false); }
+  };
+  const freshDay: SplitDay = current?.splitDay && current.splitDay !== 'custom' ? current.splitDay : days[0]?.day ?? 'full';
+  const musclesName = (ms: Muscle[]) => {
+    const names = ms.map((m) => MUSCLE_LABEL[m]);
+    return names.length <= 3 ? names.join(', ').replace(/, ([^,]*)$/, ' & $1') : 'Custom workout';
+  };
 
-  const close = () => { setView('main'); setError(''); setJson(''); setName(''); onClose(); };
+  const close = () => { setView('main'); setError(''); setJson(''); setName(''); setMuscles([]); onClose(); };
   const pick = async (id: string) => { await updateSettings({ selectedTemplateId: id }); close(); };
 
   const doImport = async (text: string) => {
@@ -34,7 +50,7 @@ export function SwitchSheet({ open, onClose, currentId }: { open: boolean; onClo
     }
   };
 
-  const titles: Record<View, string> = { main: 'Switch workout', saved: 'Saved workouts', create: 'New workout', import: 'Import workout' };
+  const titles: Record<View, string> = { main: 'Switch workout', saved: 'Saved workouts', create: 'New workout', import: 'Import workout', muscles: 'Pick muscle groups' };
 
   return (
     <Sheet open={open} onClose={close} title={titles[view]}>
@@ -42,23 +58,57 @@ export function SwitchSheet({ open, onClose, currentId }: { open: boolean; onClo
         <>
           <p className="mb-1 text-xs font-semibold tracking-wider text-muted uppercase">Within training split</p>
           <div className="space-y-2">
-            {splits.map((t) => (
-              <button key={t.id} onClick={() => pick(t.id)}
-                className={`flex w-full items-center gap-3 rounded-xl p-3 text-left ${t.id === currentId ? 'bg-accent/10 ring-1 ring-accent' : 'bg-surface-2'}`}>
-                <span className="h-9 w-9 rounded-lg" style={{ background: `color-mix(in srgb, ${CATEGORY_COLOUR[t.splitDay as 'push']} 25%, transparent)` }} />
-                <span className="flex-1">
-                  <span className="block font-semibold">{t.name}</span>
-                  <span className="block text-sm text-muted">{t.items.length} exercises</span>
-                </span>
-                <span className={`h-5 w-5 rounded-full border-2 ${t.id === currentId ? 'border-accent bg-accent shadow-[inset_0_0_0_3px_var(--color-surface-2)]' : 'border-line'}`} />
-              </button>
-            ))}
+            {days.map(({ day, template: t }) => {
+              const on = t ? t.id === currentId : current?.id === 'generated' && current.splitDay === day;
+              const colour = CATEGORY_COLOUR[(day === 'push' || day === 'pull' || day === 'legs' ? day : 'core') as 'push'];
+              return (
+                <button key={day} disabled={busy}
+                  onClick={() => (t ? pick(t.id) : generate({ muscles: dayMuscles(day), name: DAY_LABEL[day] ?? 'Workout', splitDay: day }))}
+                  className={`flex w-full items-center gap-3 rounded-xl p-3 text-left ${on ? 'bg-accent/10 ring-1 ring-accent' : 'bg-surface-2'}`}>
+                  <span className="h-9 w-9 rounded-lg" style={{ background: `color-mix(in srgb, ${colour} 25%, transparent)` }} />
+                  <span className="flex-1">
+                    <span className="block font-semibold">{t?.name ?? DAY_LABEL[day]}</span>
+                    <span className="block text-sm text-muted">{t ? `${t.items.length} exercises` : 'Generated for you'}</span>
+                  </span>
+                  <span className={`h-5 w-5 rounded-full border-2 ${on ? 'border-accent bg-accent shadow-[inset_0_0_0_3px_var(--color-surface-2)]' : 'border-line'}`} />
+                </button>
+              );
+            })}
           </div>
           <p className="mt-5 mb-1 text-xs font-semibold tracking-wider text-muted uppercase">Other options</p>
-          <SheetRow icon={<IconTarget />} label="Pick muscle groups" sub="Coming with auto-generated workouts" disabled />
+          <SheetRow icon={<IconRotate />} label="Generate a fresh workout" sub={`New ${DAY_LABEL[freshDay] ?? 'workout'} from your exercises`} disabled={busy}
+            onClick={() => generate({ muscles: dayMuscles(freshDay), name: DAY_LABEL[freshDay] ?? 'Workout', splitDay: freshDay })} />
+          <SheetRow icon={<IconTarget />} label="Pick muscle groups" sub="Generate a workout for the muscles you choose" onClick={() => setView('muscles')} />
           <SheetRow icon={<IconList />} label="View saved workouts" onClick={() => setView('saved')} />
           <SheetRow icon={<IconPlus />} label="Create workout from scratch" onClick={() => setView('create')} />
           <SheetRow icon={<IconUpload />} label="Import workout (JSON)" onClick={() => setView('import')} />
+        </>
+      )}
+
+      {view === 'muscles' && (
+        <>
+          {(['push', 'pull', 'legs'] as const).map((g) => (
+            <div key={g} className="mb-3">
+              <p className="mb-1.5 text-xs font-semibold tracking-wider text-muted uppercase">{g === 'legs' ? 'Legs' : g === 'push' ? 'Push' : 'Pull'}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {GROUP_MUSCLES[g].map((m) => (
+                  <ToggleChip key={m} on={muscles.includes(m)} onClick={() => setMuscles(muscles.includes(m) ? muscles.filter((x) => x !== m) : [...muscles, m])}>{MUSCLE_LABEL[m]}</ToggleChip>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div className="mb-3">
+            <p className="mb-1.5 text-xs font-semibold tracking-wider text-muted uppercase">Core</p>
+            <div className="flex flex-wrap gap-1.5">
+              {MUSCLES.filter((m) => m === 'abs' || m === 'obliques').map((m) => (
+                <ToggleChip key={m} on={muscles.includes(m)} onClick={() => setMuscles(muscles.includes(m) ? muscles.filter((x) => x !== m) : [...muscles, m])}>{MUSCLE_LABEL[m]}</ToggleChip>
+              ))}
+            </div>
+          </div>
+          <button disabled={!muscles.length || busy} onClick={() => generate({ muscles, name: musclesName(muscles), splitDay: 'custom' })}
+            className="mt-2 w-full rounded-xl bg-accent py-3 font-semibold text-accent-ink disabled:opacity-40">
+            Generate{muscles.length ? ` for ${muscles.length} muscle${muscles.length > 1 ? 's' : ''}` : ''}
+          </button>
         </>
       )}
 

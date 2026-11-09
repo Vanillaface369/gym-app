@@ -72,3 +72,17 @@ export const MUSCLE_LABEL: Record<string, string> = {
 export function uid(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 }
+
+export const EQUIPMENT_LABEL: Record<string, string> = {
+  barbell: 'Barbell', ez_bar: 'EZ bar', dumbbell: 'Dumbbells', cable: 'Cables', machine: 'Machines', plate_loaded: 'Plate-loaded',
+  bench: 'Bench', preacher_bench: 'Preacher bench', back_extension_bench: 'Back extension bench', assisted_machine: 'Assisted machine',
+  pull_up_bar: 'Pull-up bar', bodyweight: 'Bodyweight',
+};
+
+/** "↑ +2.5 kg", "+1 rep" or "−10% lighter", in the user's units. */
+export function fmtProgress(p: { kind: 'up' | 'reps' | 'deload'; deltaKg?: number } | undefined, units: Units): string | null {
+  if (!p) return null;
+  if (p.kind === 'up') return `↑ +${toDisplay(p.deltaKg ?? 0, units)} ${units}`;
+  if (p.kind === 'deload') return '−10% lighter';
+  return '+1 rep';
+}

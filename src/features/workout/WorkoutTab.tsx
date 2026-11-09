@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
-import { progressionTrend, recentSessionsFor, saveTemplate, setPreference, suggestedTemplate } from '../../db/actions';
+import { GENERATED_ID, previewItems, progressionTrend, saveTemplate, setPreference, suggestedTemplate, updateSettings } from '../../db/actions';
 import type { TemplateItem, WorkoutTemplate } from '../../db/types';
 import { useExercises, useSettings } from '../../lib/hooks';
-import { fmtDuration, fmtWeight, fromDisplay, toDisplay } from '../../lib/format';
+import { fmtDuration, fmtProgress, fmtWeight, fromDisplay, toDisplay } from '../../lib/format';
 import { Chip, ExerciseThumb, Sheet, SheetRow, NumberField } from '../../components/ui';
 import { ExercisePicker, RestPicker } from '../../components/ExercisePicker';
 import {
@@ -17,16 +17,18 @@ export function WorkoutTab() {
   const settings = useSettings();
   const { map } = useExercises();
   const template = useLiveQuery(() => suggestedTemplate(), []);
-  const gym = useLiveQuery(() => db.gymProfiles.get(settings.activeGymProfileId), [settings.activeGymProfileId]);
-  const history = useLiveQuery(async () => {
-    if (!template) return new Map<string, { lastTop: number | null; trend: -1 | 0 | 1 }>();
-    const out = new Map<string, { lastTop: number | null; trend: -1 | 0 | 1 }>();
-    for (const it of template.items) {
-      const [last] = await recentSessionsFor(it.exerciseId, 1);
-      out.set(it.exerciseId, { lastTop: last ? Math.max(...last.map((s) => s.weightKg)) : null, trend: await progressionTrend(it.exerciseId) });
-    }
-    return out;
+  const gyms = useLiveQuery(() => db.gymProfiles.toArray(), []) ?? [];
+  const gym = gyms.find((g) => g.id === settings.activeGymProfileId);
+  // What each exercise will start with today (progression applied), plus the e1RM trend arrow.
+  const preview = useLiveQuery(async () => {
+    if (!template) return null;
+    const items = await previewItems(template);
+    const trends = new Map<string, -1 | 0 | 1>();
+    for (const it of template.items) trends.set(it.exerciseId, await progressionTrend(it.exerciseId));
+    return { items, trends };
   }, [template]);
+  const [gymOpen, setGymOpen] = useState(false);
+  const isGenerated = template?.id === GENERATED_ID;
 
   const [switchOpen, setSwitchOpen] = useState(false);
   const [menuFor, setMenuFor] = useState<TemplateItem | null>(null);
@@ -52,7 +54,7 @@ export function WorkoutTab() {
     <div className="pt-safe px-4">
       <header className="flex h-14 items-center justify-between">
         <Link to="/settings" aria-label="Settings" className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-sm font-bold">{initials}</Link>
-        <Link to="/settings" className="text-sm font-medium text-accent">My Plan</Link>
+        <Link to="/plan" className="text-sm font-medium text-accent">My Plan</Link>
       </header>
 
       {template === undefined ? null : !template ? (
@@ -63,7 +65,7 @@ export function WorkoutTab() {
             <div className="min-w-0">
               <p className="text-sm text-muted">Today's workout</p>
               <h1 className="truncate text-3xl font-bold tracking-tight">{template.name}</h1>
-              <p className="mt-1 text-sm text-muted">{items.length} exercises • {muscles.size} muscles</p>
+              <p className="mt-1 text-sm text-muted">{isGenerated && <span className="font-semibold text-accent">Generated · </span>}{items.length} exercises • {muscles.size} muscles</p>
             </div>
             <button onClick={() => setSwitchOpen(true)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface-2 px-4 py-2.5 text-sm font-semibold active:opacity-70">
               <IconSwap size={16} />Switch
@@ -72,14 +74,18 @@ export function WorkoutTab() {
 
           <div className="mt-4 flex gap-2">
             <Chip><IconTimer size={16} />{fmtDuration(settings.durationMin * 60)}</Chip>
-            <Chip>{gym?.name ?? 'Your Gym'}</Chip>
+            <Chip onClick={() => setGymOpen(true)}>{gym?.name ?? 'Your Gym'}</Chip>
           </div>
 
           <ul className="mt-5 divide-y divide-line">
             {items.map((it) => {
               const ex = map.get(it.exerciseId);
-              const h = history?.get(it.exerciseId);
-              const w = h?.lastTop ?? it.targetWeightKg;
+              const p = preview?.items.get(`${it.exerciseId}-${it.order}`);
+              const first = p?.sets.find((x) => !x.isWarmup);
+              const w = (it.maxEffort ? p?.sets.at(-1)?.weightKg ?? it.targetWeightKg : first?.weightKg ?? it.targetWeightKg) || null; // 0 = not set yet
+              const reps = first?.reps ?? it.targetReps;
+              const trend = preview?.trends.get(it.exerciseId);
+              const note = fmtProgress(p?.progress, settings.units);
               return (
                 <li key={`${it.exerciseId}-${it.order}`} className="flex items-center gap-3 py-3">
                   <ExerciseThumb ex={ex} />
@@ -89,11 +95,12 @@ export function WorkoutTab() {
                       {it.maxEffort ? (
                         <><span className="font-semibold text-accent">Max Effort</span> • {it.sets} sets • up to {fmtWeight(w, settings.units)}</>
                       ) : (
-                        <>{it.sets} sets • {it.targetReps} reps • {fmtWeight(w, settings.units)}</>
+                        <>{it.sets} sets • {reps} reps • {fmtWeight(w, settings.units)}</>
                       )}
-                      {h?.trend === 1 && <IconUp size={14} className="text-accent" aria-label="Going up" />}
-                      {h?.trend === -1 && <IconDown size={14} className="text-danger" aria-label="Going down" />}
+                      {trend === 1 && <IconUp size={14} className="text-accent" aria-label="Going up" />}
+                      {trend === -1 && <IconDown size={14} className="text-danger" aria-label="Going down" />}
                     </p>
+                    {note && <p className={`text-xs font-semibold ${p?.progress?.kind === 'deload' ? 'text-warn' : 'text-accent'}`}>{note}</p>}
                   </div>
                   {ex?.preference === 1 && <IconStar size={16} className="text-accent" aria-label="More often" />}
                   <button aria-label={`Options for ${ex?.name}`} onClick={() => setMenuFor(it)} className="-mr-2 rounded-full p-2 text-muted active:bg-surface-2"><IconMore /></button>
@@ -104,11 +111,26 @@ export function WorkoutTab() {
           <button onClick={() => setAdding(true)} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-sm font-medium text-muted active:bg-surface-2">
             <IconPlus size={18} />Add exercise
           </button>
-          <p className="mt-3 text-center text-xs text-muted">Changes here update your {template.name} template.</p>
+          <p className="mt-3 text-center text-xs text-muted">
+            {isGenerated ? 'Generated for you. Changes here stay with this workout.' : `Changes here update your ${template.name} template.`}
+          </p>
         </>
       )}
 
-      <SwitchSheet open={switchOpen} onClose={() => setSwitchOpen(false)} currentId={template?.id} />
+      <SwitchSheet open={switchOpen} onClose={() => setSwitchOpen(false)} currentId={template?.id} current={template ?? null} />
+
+      <Sheet open={gymOpen} onClose={() => setGymOpen(false)} title="Where are you training?">
+        <div className="space-y-2">
+          {gyms.map((g) => (
+            <button key={g.id} onClick={async () => { await updateSettings({ activeGymProfileId: g.id }); setGymOpen(false); }}
+              className={`flex w-full items-center justify-between rounded-xl p-3 text-left ${g.id === settings.activeGymProfileId ? 'bg-accent/10 ring-1 ring-accent' : 'bg-surface-2'}`}>
+              <span><span className="block font-semibold">{g.name}</span>
+                <span className="block text-sm text-muted">{g.bodyweightOnly ? 'Bodyweight only' : `${g.equipment.length} kinds of equipment`}</span></span>
+            </button>
+          ))}
+        </div>
+        <Link to="/plan" className="mt-3 block py-2 text-center text-sm font-semibold text-accent">Edit gyms in My Plan</Link>
+      </Sheet>
 
       {/* Exercise ⋯ menu */}
       <Sheet open={!!menuFor} onClose={() => setMenuFor(null)} title={menuFor ? map.get(menuFor.exerciseId)?.name : ''}>
@@ -205,7 +227,7 @@ function EditItemSheet({ item, units, onClose, onSave }: {
         <label className="text-sm text-muted">{item?.maxEffort ? 'Top-set reps' : 'Reps'}<NumberField ariaLabel="Reps" value={reps} onChange={(n) => setReps(Math.max(1, Math.round(n)))} /></label>
         <label className="text-sm text-muted">{item?.maxEffort ? `Top (${units})` : `Weight (${units})`}<NumberField ariaLabel="Weight" value={weight} step={0.5} onChange={setWeight} /></label>
       </div>
-      <p className="mt-3 text-xs text-muted">Weights pre-fill from your last session when there is one; this is the fallback.</p>
+      <p className="mt-3 text-xs text-muted">With history, weights and reps pre-fill from your last session plus progression; this is the fallback.</p>
       <button
         className="mt-4 w-full rounded-xl bg-accent py-3 font-semibold text-accent-ink"
         onClick={() => onSave({ sets, targetReps: reps, targetWeightKg: weight === '' ? null : fromDisplay(weight, units) })}

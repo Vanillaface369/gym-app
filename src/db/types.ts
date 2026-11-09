@@ -31,6 +31,9 @@ export interface Exercise {
   archived: boolean;
   /** Times used (seeded from Fitbod history, incremented on each finished workout). */
   useCount: number;
+  /** Rep range for progression. Missing = the goal's default (8-12 for Build Muscle). */
+  repMin?: number;
+  repMax?: number;
 }
 
 export interface TemplateItem {
@@ -126,6 +129,13 @@ export interface Settings {
   activeGymProfileId: string;
   /** Template picked via Switch; cleared after a workout is finished. */
   selectedTemplateId?: string;
+  /** My Plan: free-text injuries/limitations, and muscles generated workouts should avoid. */
+  injuryNotes?: string;
+  avoidMuscles?: Muscle[];
+  /** Weight steps for progression, per kind of equipment. Missing = defaults (see lib/progression). */
+  weightSteps?: Partial<Record<'dumbbell' | 'cable_machine' | 'barbell' | 'plate_loaded', number>>;
+  /** A generated workout the user picked or edited (selectedTemplateId === 'generated'). */
+  generated?: WorkoutTemplate;
   /** Exercises pinned as benchmark lifts on Body > Results. Unset = the most-used exercises. */
   benchmarkIds?: string[];
   /** Lifetime totals carried over from before this app (milestones). */
@@ -151,6 +161,8 @@ export interface ActiveItem {
   exerciseId: string;
   restSec: number;
   maxEffort?: boolean;
+  /** What progression suggested for this session (shown as e.g. "↑ +2.5 kg", "+1 rep"). */
+  progress?: { kind: 'up' | 'reps' | 'deload'; deltaKg?: number };
   sets: ActiveSet[];
 }
 export interface RestTimer {

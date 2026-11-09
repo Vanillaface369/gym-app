@@ -9,6 +9,8 @@ import { TargetsTab } from './features/targets/TargetsTab';
 import { BodyTab } from './features/body/BodyTab';
 import { ExerciseHistoryPage } from './features/progress/ExerciseHistory';
 import { ReportPage } from './features/strength/ReportPage';
+import { PlanPage } from './features/plan/PlanPage';
+import { ExercisesPage } from './features/plan/ExercisesPage';
 import { LogTab } from './features/log/LogTab';
 import { RestAlarm } from './features/session/RestTimer';
 import { useActive, useSettings, useWakeLock } from './lib/hooks';
@@ -34,6 +36,8 @@ export default function App() {
         <Route path="/session/:id" element={<SummaryPage />} />
         <Route path="/exercise/:id" element={<ExerciseHistoryPage />} />
         <Route path="/report" element={<ReportPage />} />
+        <Route path="/plan" element={<PlanPage />} />
+        <Route path="/exercises" element={<ExercisesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Routes>
     </HashRouter>

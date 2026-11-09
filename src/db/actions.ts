@@ -1,10 +1,14 @@
 import { db } from './db';
 import { defaultSettings } from './seed';
-import type {
-  ActiveItem, ActiveWorkout, Exercise, PersonalRecord, SetLog, Settings, TemplateItem, WorkoutSession, WorkoutTemplate,
+import {
+  MUSCLES, type ActiveItem, type ActiveWorkout, type Exercise, type Muscle, type PersonalRecord, type SetLog, type Settings,
+  type SplitDay, type TemplateItem, type WorkoutSession, type WorkoutTemplate,
 } from './types';
 import { caloriesEst, detectRecords, e1rm, isCelebrated, maxEffortRamp, round1, volumeKg, type NewRecord, type PriorBest } from '../lib/calc';
 import { uid } from '../lib/format';
+import { DEFAULT_STEPS, goalRange, stepKind, suggest, type RepRange } from '../lib/progression';
+import { chooseDay, DAY_LABEL, dayMuscles, pickExercises, splitDays } from '../lib/generate';
+import { muscleRecovery, sessionDoses } from '../lib/recovery';
 
 // ---------- Settings ----------
 export async function getSettings(): Promise<Settings> {
@@ -42,8 +46,25 @@ export async function progressionTrend(exerciseId: string): Promise<-1 | 0 | 1> 
 }
 
 // ---------- Building a workout ----------
-async function buildItem(t: Pick<TemplateItem, 'exerciseId' | 'sets' | 'targetReps' | 'targetWeightKg' | 'restSec' | 'maxEffort'>): Promise<ActiveItem> {
-  const [last] = await recentSessionsFor(t.exerciseId, 1);
+type ItemPlan = Pick<TemplateItem, 'exerciseId' | 'sets' | 'targetReps' | 'targetWeightKg' | 'restSec' | 'maxEffort'>;
+
+export function repRange(ex: Exercise | undefined, settings: Settings): RepRange {
+  const g = goalRange(settings.goal);
+  return { min: ex?.repMin ?? g.min, max: ex?.repMax ?? g.max };
+}
+export function weightStep(ex: Exercise | undefined, settings: Settings): number {
+  const kind = ex ? stepKind(ex.equipment) : null;
+  return kind ? settings.weightSteps?.[kind] ?? DEFAULT_STEPS[kind] : 0;
+}
+
+/**
+ * One exercise for a new workout. Normal exercises use double progression from recent sessions (SPEC 5);
+ * Max Effort ramps to last time's top weight. Without history, the template's numbers are used.
+ */
+async function buildItem(t: ItemPlan, settings: Settings): Promise<ActiveItem> {
+  const ex = await db.exercises.get(t.exerciseId);
+  const history = await recentSessionsFor(t.exerciseId, 3);
+  const last = history[0];
   const lastTop = last?.length ? Math.max(...last.map((s) => s.weightKg)) : null;
   if (t.maxEffort) {
     const top = lastTop ?? t.targetWeightKg ?? 0;
@@ -52,43 +73,124 @@ async function buildItem(t: Pick<TemplateItem, 'exerciseId' | 'sets' | 'targetRe
       sets: maxEffortRamp(t.sets, top, t.targetReps).map((s) => ({ ...s, done: false, isWarmup: false })),
     };
   }
-  const sets = Array.from({ length: t.sets }, (_, i) => {
-    const fromLast = last?.[Math.min(i, last.length - 1)]?.weightKg;
-    return { reps: t.targetReps, weightKg: fromLast ?? t.targetWeightKg ?? 0, done: false, isWarmup: false };
-  });
-  return { key: uid(), exerciseId: t.exerciseId, restSec: t.restSec, sets };
+  const sug = suggest(history, t.sets, repRange(ex, settings), weightStep(ex, settings));
+  const sets = sug
+    ? sug.sets.map((x) => ({ ...x, done: false, isWarmup: false }))
+    : Array.from({ length: t.sets }, () => ({ reps: t.targetReps, weightKg: t.targetWeightKg ?? 0, done: false, isWarmup: false }));
+  return { key: uid(), exerciseId: t.exerciseId, restSec: t.restSec, sets, ...(sug ? { progress: { kind: sug.kind, ...(sug.deltaKg !== undefined ? { deltaKg: sug.deltaKg } : {}) } } : {}) };
+}
+
+/** What each template item will look like when started (for the Workout tab preview), keyed `${exerciseId}-${order}`. */
+export async function previewItems(t: WorkoutTemplate): Promise<Map<string, ActiveItem>> {
+  const settings = await getSettings();
+  const out = new Map<string, ActiveItem>();
+  for (const it of t.items) out.set(`${it.exerciseId}-${it.order}`, await buildItem(it, settings));
+  return out;
 }
 
 export async function itemForExercise(ex: Exercise): Promise<ActiveItem> {
-  return buildItem({ exerciseId: ex.id, sets: 3, targetReps: 10, targetWeightKg: null, restSec: ex.defaultRestSec });
+  const settings = await getSettings();
+  const r = repRange(ex, settings);
+  return buildItem({ exerciseId: ex.id, sets: 3, targetReps: Math.round((r.min + r.max) / 2), targetWeightKg: null, restSec: ex.defaultRestSec }, settings);
 }
 
-/** The template to suggest today: the one picked via Switch, else the split day done least recently. */
+/** Recovery % per muscle right now (same model as Body > Recovery). */
+export async function currentRecovery(now = Date.now()): Promise<Partial<Record<Muscle, number>>> {
+  const since = now - 14 * 86_400_000;
+  const [sessions, overrides, exercises] = await Promise.all([
+    db.sessions.where('startedAt').aboveOrEqual(since).toArray(), db.recoveryOverrides.toArray(), db.exercises.toArray(),
+  ]);
+  const exMap = new Map(exercises.map((e) => [e.id, e]));
+  const sets = sessions.length ? await db.sets.where('sessionId').anyOf(sessions.map((s) => s.id)).toArray() : [];
+  const trained = sessions.map((s) => ({ id: s.id, name: s.name, endedAt: s.endedAt, doses: sessionDoses(sets.filter((x) => x.sessionId === s.id), exMap) }));
+  const ov = new Map(overrides.map((o) => [o.muscle, o]));
+  return Object.fromEntries(MUSCLES.map((m) => [m, muscleRecovery(m, trained, ov.get(m), now).percent]));
+}
+
+export const GENERATED_ID = 'generated';
+
+/** Generate a workout for some muscles (a split day, or muscles picked by hand). Not saved; see pickGenerated. */
+export async function generateWorkout(opts: { muscles: Muscle[]; name: string; splitDay: SplitDay }): Promise<WorkoutTemplate> {
+  const settings = await getSettings();
+  const [exercises, gym, recovery, sessions] = await Promise.all([
+    db.exercises.toArray(), db.gymProfiles.get(settings.activeGymProfileId), currentRecovery(), db.sessions.orderBy('startedAt').reverse().toArray(),
+  ]);
+  const lastSame = opts.splitDay === 'custom' ? sessions[0] : sessions.find((s) => s.splitDay === opts.splitDay);
+  const picked = pickExercises({
+    muscles: opts.muscles, exercises, equipment: gym?.equipment ?? [], bodyweightOnly: gym?.bodyweightOnly ?? false,
+    avoid: settings.avoidMuscles ?? [], recovery, lastTime: new Set(lastSame?.exerciseOrder ?? []),
+    variability: settings.variability, durationMin: settings.durationMin,
+  });
+  const byId = new Map(exercises.map((e) => [e.id, e]));
+  return {
+    id: GENERATED_ID, name: opts.name, splitDay: opts.splitDay,
+    items: picked.map((p, i) => {
+      const ex = byId.get(p.id)!;
+      const r = repRange(ex, settings);
+      return { exerciseId: p.id, sets: 3, targetReps: Math.round((r.min + r.max) / 2), targetWeightKg: null, restSec: ex.defaultRestSec, order: i };
+    }),
+  };
+}
+
+/** Save a generated workout as today's pick (from Switch, or after editing it on the Workout tab). */
+export async function pickGenerated(t: WorkoutTemplate) {
+  await updateSettings({ generated: { ...t, id: GENERATED_ID }, selectedTemplateId: GENERATED_ID });
+}
+
+/**
+ * The workout to suggest today: the one picked via Switch, else the split day due next (done least recently, ties to the
+ * freshest muscles). A day with a saved template uses it; a day without one is generated.
+ */
 export async function suggestedTemplate(): Promise<WorkoutTemplate | null> {
   const settings = await getSettings();
+  if (settings.selectedTemplateId === GENERATED_ID && settings.generated) return settings.generated;
   if (settings.selectedTemplateId) {
     const t = await db.templates.get(settings.selectedTemplateId);
     if (t) return t;
   }
-  const order = ['push', 'pull', 'legs'];
-  const splits = (await db.templates.toArray())
-    .filter((t) => t.splitDay && order.includes(t.splitDay))
-    .sort((a, b) => order.indexOf(a.splitDay!) - order.indexOf(b.splitDay!));
-  if (!splits.length) return (await db.templates.toArray())[0] ?? null;
-  const sessions = await db.sessions.orderBy('startedAt').reverse().toArray();
-  const lastDone = (t: WorkoutTemplate) =>
-    sessions.find((s) => s.templateId === t.id || (s.splitDay && s.splitDay === t.splitDay))?.startedAt ?? 0;
-  return splits.reduce((best, t) => (lastDone(t) < lastDone(best) ? t : best));
+  const [templates, sessions, recovery] = await Promise.all([
+    db.templates.toArray(), db.sessions.orderBy('startedAt').reverse().toArray(), currentRecovery(),
+  ]);
+  const days = splitDays(settings.split);
+  const templateFor = (d: SplitDay) => templates.find((t) => t.splitDay === d);
+  const due = chooseDay(days.map((day) => {
+    const t = templateFor(day);
+    const ms = dayMuscles(day);
+    return {
+      day,
+      lastDone: sessions.find((s) => s.splitDay === day || (t && s.templateId === t.id))?.startedAt ?? 0,
+      freshness: ms.reduce((a, m) => a + (recovery[m] ?? 100), 0) / ms.length,
+    };
+  }));
+  if (!due) return templates[0] ?? null;
+  return templateFor(due) ?? generateWorkout({ muscles: dayMuscles(due), name: DAY_LABEL[due] ?? 'Workout', splitDay: due });
 }
 
 export async function startWorkout(template: WorkoutTemplate): Promise<void> {
+  const settings = await getSettings();
   const items: ActiveItem[] = [];
-  for (const t of [...template.items].sort((a, b) => a.order - b.order)) items.push(await buildItem(t));
+  for (const t of [...template.items].sort((a, b) => a.order - b.order)) items.push(await buildItem(t, settings));
+  if (settings.warmups) await addWarmups(items, settings);
   const active: ActiveWorkout = {
     id: 'current', name: template.name, templateId: template.id, splitDay: template.splitDay,
     startedAt: Date.now(), items, rest: null,
   };
   await db.active.put(active);
+}
+
+/** Warm-up sets on: one light set (about half weight, 10 reps) before the first exercise for each main muscle. */
+async function addWarmups(items: ActiveItem[], settings: Settings) {
+  const seen = new Set<Muscle>();
+  for (const it of items) {
+    const ex = await db.exercises.get(it.exerciseId);
+    const w = it.sets[0]?.weightKg ?? 0;
+    if (w <= 0) continue; // no weight yet: nothing to warm up with, and the muscle still needs its warm-up later
+    const fresh = (ex?.primaryMuscles ?? []).some((m) => !seen.has(m));
+    ex?.primaryMuscles.forEach((m) => seen.add(m));
+    if (!fresh || it.maxEffort) continue; // Max Effort already ramps up
+    const step = Math.max(0.5, weightStep(ex, settings));
+    it.sets.unshift({ reps: 10, weightKg: Math.max(0, Math.round((w * 0.5) / step) * step), done: false, isWarmup: true });
+  }
 }
 
 export async function startEmptyWorkout(name = 'Workout'): Promise<void> {
@@ -276,7 +378,7 @@ export async function finishWorkout(): Promise<string | null> {
     await db.records.bulkAdd(newRecords);
     await db.active.delete('current');
     const cur = await db.settings.get('settings');
-    if (cur) await db.settings.put({ ...cur, selectedTemplateId: undefined });
+    if (cur) await db.settings.put({ ...cur, selectedTemplateId: undefined, generated: undefined });
   });
   return sessionId;
 }
@@ -346,6 +448,7 @@ export async function rebuildRecords(exerciseIds: string[]) {
 // ---------- Templates ----------
 export async function saveTemplate(t: WorkoutTemplate) {
   t.items = t.items.map((it, i) => ({ ...it, order: i }));
+  if (t.id === GENERATED_ID) return pickGenerated(t); // edits to a generated workout stay with it, not in templates
   await db.templates.put(t);
 }
 
@@ -454,7 +557,7 @@ export async function createManualSession(meta: SessionMeta, template?: WorkoutT
   const groups: EditGroup[] = [];
   if (template) {
     for (const t of [...template.items].sort((a, b) => a.order - b.order)) {
-      const it = await buildItem(t);
+      const it = await buildItem(t, settings);
       groups.push({ exerciseId: it.exerciseId, sets: it.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg })) });
     }
   }

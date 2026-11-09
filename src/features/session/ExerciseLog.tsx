@@ -3,7 +3,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../db/db';
 import { activeActions } from '../../db/actions';
 import { unlockAudio, useActive, useExercises, useSettings } from '../../lib/hooks';
-import { fmtClock, fromDisplay, MUSCLE_LABEL, toDisplay } from '../../lib/format';
+import { fmtClock, fmtProgress, fromDisplay, MUSCLE_LABEL, toDisplay } from '../../lib/format';
 import { Chip, NumberField, PageHeader, Sheet, SheetRow } from '../../components/ui';
 import { ExercisePicker, RestPicker } from '../../components/ExercisePicker';
 import { IconCheck, IconChevronLeft, IconEdit, IconHistory, IconInfo, IconLink, IconMinus, IconMore, IconPlus, IconSwap, IconTimer, IconTrash } from '../../components/icons';
@@ -30,6 +30,7 @@ export function ExerciseLogPage() {
   const u = settings.units;
   const idx = active.items.indexOf(item);
   const next = active.items[idx + 1];
+  const note = fmtProgress(item.progress, u);
 
   return (
     <div className="pb-48">
@@ -46,6 +47,7 @@ export function ExerciseLogPage() {
               {item.maxEffort && <span className="font-semibold text-accent">Max Effort Day · </span>}
               {ex?.primaryMuscles.map((m) => MUSCLE_LABEL[m]).join(', ')}
             </p>
+            {note && <p className={`mt-1 text-sm font-semibold ${item.progress?.kind === 'deload' ? 'text-warn' : 'text-accent'}`}>Today: {note}</p>}
           </div>
           <button onClick={() => setHowToOpen(true)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface-2 px-3.5 py-2 text-sm font-semibold"><IconInfo size={16} />How-To</button>
         </div>
@@ -64,13 +66,14 @@ export function ExerciseLogPage() {
           <span />
           {item.sets.map((s, i) => {
             const isCurrent = i === firstOpen;
+            const label = s.isWarmup ? 'W' : String(item.sets.slice(0, i + 1).filter((x) => !x.isWarmup).length);
             return (
               <div key={i} className="contents">
                 <button
                   aria-label={`Set ${i + 1} options`}
                   onClick={() => setRemoveSetIdx(i)}
                   className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${s.done ? 'bg-accent text-accent-ink' : isCurrent ? 'bg-surface-2 ring-2 ring-accent' : 'bg-surface-2 text-muted'}`}
-                >{s.done ? <IconCheck size={18} /> : i + 1}</button>
+                 title={s.isWarmup ? 'Warm-up set' : undefined}>{s.done ? <IconCheck size={18} /> : label}</button>
                 <NumberField ariaLabel={`Set ${i + 1} reps`} value={s.reps} done={s.done} highlight={isCurrent}
                   onChange={(n) => activeActions.updateSet(item.key, i, { reps: Math.round(n) })} />
                 <NumberField ariaLabel={`Set ${i + 1} weight`} step={0.5} done={s.done} highlight={isCurrent}
@@ -96,7 +99,7 @@ export function ExerciseLogPage() {
           <div className="flex gap-3">
             <button onClick={() => { unlockAudio(); activeActions.logAll(item.key); }} className="rounded-2xl bg-surface-2 px-5 py-4 font-semibold active:opacity-70">Log All Sets</button>
             <button onClick={() => { unlockAudio(); activeActions.logNext(item.key); }}
-              className="flex-1 rounded-2xl bg-accent py-4 text-lg font-bold text-accent-ink shadow-xl shadow-black/50 active:scale-[0.98]">Log Set {firstOpen + 1}</button>
+              className="flex-1 rounded-2xl bg-accent py-4 text-lg font-bold text-accent-ink shadow-xl shadow-black/50 active:scale-[0.98]">{item.sets[firstOpen].isWarmup ? 'Log Warm-up' : `Log Set ${item.sets.slice(0, firstOpen + 1).filter((x) => !x.isWarmup).length}`}</button>
           </div>
         ) : (
           <button onClick={() => nav(next ? `/active/${next.key}` : '/active')}
