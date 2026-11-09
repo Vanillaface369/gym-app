@@ -71,7 +71,7 @@ export function weekdayLabels(weekStart: 0 | 1): string[] {
   return [...names.slice(weekStart), ...names.slice(0, weekStart)];
 }
 
-// ---------- Milestones (full screen comes in the Polish stage; the Log header shows the level count) ----------
+// ---------- Milestones ----------
 export const MILESTONE_TIERS = {
   workouts: [10, 25, 50, 100, 200, 500, 1000, 2000],
   volumeKg: [10_000, 50_000, 100_000, 250_000, 500_000, 1_000_000, 2_500_000, 5_000_000],
@@ -82,4 +82,37 @@ export const MILESTONE_TIERS = {
 export function milestoneLevel(value: number, tiers: readonly number[]): { level: number; next: number | null } {
   const level = tiers.filter((t) => value >= t).length;
   return { level, next: tiers[level] ?? null };
+}
+
+export type Track = 'workouts' | 'volumeKg' | 'calories';
+export interface Totals { workouts: number; volumeKg: number; calories: number }
+
+/** Lifetime totals: carried-over starting numbers plus every logged workout. */
+export function lifetimeTotals(sessions: { volumeKg: number; caloriesEst: number }[], offset: Totals): Totals {
+  return {
+    workouts: offset.workouts + sessions.length,
+    volumeKg: offset.volumeKg + sessions.reduce((t, s) => t + s.volumeKg, 0),
+    calories: offset.calories + sessions.reduce((t, s) => t + s.caloriesEst, 0),
+  };
+}
+
+/** Tracks whose milestone level went up between two totals, with the new level. */
+export function levelUps(before: Totals, after: Totals): { track: Track; level: number; next: number | null }[] {
+  return (Object.keys(MILESTONE_TIERS) as Track[])
+    .map((track) => ({ track, b: milestoneLevel(before[track], MILESTONE_TIERS[track]), a: milestoneLevel(after[track], MILESTONE_TIERS[track]) }))
+    .filter((x) => x.a.level > x.b.level)
+    .map((x) => ({ track: x.track, level: x.a.level, next: x.a.next }));
+}
+
+/** Longest run of consecutive weeks that met the goal, ever (the current week counts only once met). */
+export function longestStreak(startTimes: number[], goal: number, weekStart: 0 | 1, now = Date.now()): number {
+  if (goal <= 0 || !startTimes.length) return 0;
+  let best = 0, run = 0;
+  const thisWeek = startOfWeek(now, weekStart);
+  for (let wk = startOfWeek(Math.min(...startTimes), weekStart); wk <= thisWeek; wk = addDays(wk, 7)) {
+    const met = trainingDays(startTimes, wk, addDays(wk, 7)) >= goal;
+    if (met) best = Math.max(best, ++run);
+    else if (wk !== thisWeek) run = 0;
+  }
+  return best;
 }

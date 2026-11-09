@@ -42,3 +42,8 @@ input[type="number"] { -moz-appearance: textfield; }
 .sheet-in { animation: sheet-up .22s ease-out; }
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Milestone level-up on the workout summary */
+@keyframes pop { 0% { transform: scale(.85); opacity: 0 } 60% { transform: scale(1.04); opacity: 1 } 100% { transform: scale(1) } }
+.pop-in { animation: pop .45s cubic-bezier(.2, .8, .3, 1.2) both; }
+@media (prefers-reduced-motion: reduce) { .pop-in, .sheet-in { animation: none; } }

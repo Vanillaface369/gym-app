@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
 import type { Category, Exercise, WorkoutSession } from '../../db/types';
 import { useExercises, useSettings } from '../../lib/hooks';
 import { fmtBigWeight, fmtDuration } from '../../lib/format';
 import {
-  addDays, dayKey, MILESTONE_TIERS, milestoneLevel, monthGrid, startOfDay, startOfWeek, trainingDays, weekStreak, weekdayLabels,
+  addDays, dayKey, lifetimeTotals, longestStreak, MILESTONE_TIERS, milestoneLevel, monthGrid, startOfDay, startOfWeek, trainingDays, weekStreak, weekdayLabels,
 } from '../../lib/stats';
-import { CATEGORY_COLOUR } from '../../components/ui';
+import { CATEGORY_COLOUR, Sheet } from '../../components/ui';
 import { IconChevronLeft, IconChevronRight, IconDown, IconFlame, IconPlus, IconUp, IconWeight, IconX } from '../../components/icons';
 import { ManualLogSheet } from './ManualLogSheet';
 
@@ -23,6 +23,8 @@ export function LogTab() {
   const [collapsed, setCollapsed] = useState(readCollapsed);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
+  const [streakOpen, setStreakOpen] = useState(false);
+  const nav = useNavigate();
 
   const list = sessions ?? [];
   const now = Date.now();
@@ -30,12 +32,12 @@ export function LogTab() {
   const wk = startOfWeek(now, s.weekStart);
   const weekDays = trainingDays(starts, wk, addDays(wk, 7));
   const streak = weekStreak(starts, s.workoutsPerWeek, s.weekStart, now);
-  const totalWorkouts = s.lifetimeOffset.workouts + list.length;
-  const totalVolume = s.lifetimeOffset.volumeKg + list.reduce((t, w) => t + w.volumeKg, 0);
-  const totalCalories = s.lifetimeOffset.calories + list.reduce((t, w) => t + w.caloriesEst, 0);
-  const levels = milestoneLevel(totalWorkouts, MILESTONE_TIERS.workouts).level
-    + milestoneLevel(totalVolume, MILESTONE_TIERS.volumeKg).level
-    + milestoneLevel(totalCalories, MILESTONE_TIERS.calories).level;
+  const totals = lifetimeTotals(list, s.lifetimeOffset);
+  const totalWorkouts = totals.workouts;
+  const levels = milestoneLevel(totals.workouts, MILESTONE_TIERS.workouts).level
+    + milestoneLevel(totals.volumeKg, MILESTONE_TIERS.volumeKg).level
+    + milestoneLevel(totals.calories, MILESTONE_TIERS.calories).level;
+  const best = longestStreak(starts, s.workoutsPerWeek, s.weekStart, now);
 
   const minutesByDay = useMemo(() => {
     const m = new Map<string, number>();
@@ -67,10 +69,40 @@ export function LogTab() {
 
       <div className="grid grid-cols-4 gap-2">
         <Stat label="Workouts" value={totalWorkouts.toLocaleString('en-AU')} />
-        <Stat label="Milestones" value={`${levels}`} sub="levels" />
+        <Stat label="Milestones" value={`${levels}`} sub="levels" onClick={() => nav('/milestones')} />
         <Stat label="This week" value={`${weekDays}/${s.workoutsPerWeek}`} sub="days" accent={weekDays >= s.workoutsPerWeek} />
-        <Stat label="Streak" value={`${streak}`} sub={streak === 1 ? 'week' : 'weeks'} accent={streak > 0} />
+        <Stat label="Streak" value={`${streak}`} sub={streak === 1 ? 'week' : 'weeks'} accent={streak > 0} onClick={() => setStreakOpen(true)} />
       </div>
+
+      <Sheet open={streakOpen} onClose={() => setStreakOpen(false)} title="Weekly streak">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-2xl bg-surface-2 p-3"><p className="text-xs text-muted">Current</p><p className="tabular text-3xl font-bold text-accent">{streak}</p><p className="text-xs text-muted">{streak === 1 ? 'week' : 'weeks'}</p></div>
+          <div className="rounded-2xl bg-surface-2 p-3"><p className="text-xs text-muted">Longest</p><p className="tabular text-3xl font-bold">{best}</p><p className="text-xs text-muted">{best === 1 ? 'week' : 'weeks'}</p></div>
+        </div>
+        <p className="mt-4 text-sm font-semibold">This week: {weekDays} of {s.workoutsPerWeek} days</p>
+        <div className="mt-2 flex gap-1.5" aria-hidden>
+          {Array.from({ length: s.workoutsPerWeek }, (_, i) => <span key={i} className={`h-2 flex-1 rounded-full ${i < weekDays ? 'bg-accent' : 'bg-surface-2'}`} />)}
+        </div>
+        <p className="mt-2 text-sm text-muted">
+          {weekDays >= s.workoutsPerWeek ? 'Goal met. This week counts toward your streak.'
+            : `${s.workoutsPerWeek - weekDays} more training day${s.workoutsPerWeek - weekDays > 1 ? 's' : ''} to keep the streak going.`}
+        </p>
+        <h3 className="mt-5 text-sm font-semibold">Last 8 weeks</h3>
+        <ol className="mt-2 grid grid-cols-8 gap-1.5">
+          {Array.from({ length: 8 }, (_, i) => {
+            const w = addDays(wk, -7 * (7 - i));
+            const days = trainingDays(starts, w, addDays(w, 7));
+            const met = days >= s.workoutsPerWeek;
+            return (
+              <li key={w} className="text-center" aria-label={`Week of ${new Date(w).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}: ${days} days`}>
+                <span className={`tabular flex h-9 items-center justify-center rounded-lg text-sm font-semibold ${met ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-muted'}`}>{days}</span>
+                <span className="mt-0.5 block text-[10px] text-muted">{new Date(w).getDate()}/{new Date(w).getMonth() + 1}</span>
+              </li>
+            );
+          })}
+        </ol>
+        <p className="mt-3 text-xs text-muted">A week counts when you train on {s.workoutsPerWeek} different days. Change the goal in My Plan.</p>
+      </Sheet>
 
       <section className="mt-5 rounded-2xl bg-surface p-3">
         <div className="flex items-center justify-between px-1 pb-2">
@@ -131,13 +163,14 @@ export function LogTab() {
   );
 }
 
-function Stat({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
+function Stat({ label, value, sub, accent, onClick }: { label: string; value: string; sub?: string; accent?: boolean; onClick?: () => void }) {
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <div className="rounded-2xl bg-surface px-2 py-3 text-center">
+    <Tag onClick={onClick} className="rounded-2xl bg-surface px-2 py-3 text-center active:bg-surface-2">
       <p className={`tabular text-xl font-bold ${accent ? 'text-accent' : ''}`}>{value}</p>
       <p className="text-[11px] leading-tight text-muted">{sub ? `${sub}` : ' '}</p>
       <p className="mt-1 text-[11px] font-medium leading-tight">{label}</p>
-    </div>
+    </Tag>
   );
 }
 

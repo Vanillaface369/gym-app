@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { milestoneLevel, MILESTONE_TIERS, monthGrid, startOfWeek, weekStreak } from './stats';
+import { levelUps, lifetimeTotals, longestStreak, milestoneLevel, MILESTONE_TIERS, monthGrid, startOfWeek, weekStreak } from './stats';
 
 const at = (y: number, m: number, d: number, h = 10) => new Date(y, m - 1, d, h).getTime();
 
@@ -31,5 +31,27 @@ describe('stats', () => {
   it('milestone level and next target', () => {
     expect(milestoneLevel(206, MILESTONE_TIERS.workouts)).toEqual({ level: 5, next: 500 });
     expect(milestoneLevel(5, MILESTONE_TIERS.workouts)).toEqual({ level: 0, next: 10 });
+  });
+});
+
+describe('milestones and streaks', () => {
+  it('lifetime totals add the starting numbers', () => {
+    expect(lifetimeTotals([{ volumeKg: 1000, caloriesEst: 300 }, { volumeKg: 500, caloriesEst: 200 }], { workouts: 10, volumeKg: 100, calories: 50 }))
+      .toEqual({ workouts: 12, volumeKg: 1600, calories: 550 });
+  });
+
+  it('spots level-ups', () => {
+    const before = { workouts: 24, volumeKg: 9_000, calories: 900 };
+    expect(levelUps(before, { workouts: 25, volumeKg: 9_500, calories: 900 })).toEqual([{ track: 'workouts', level: 2, next: 50 }]);
+    expect(levelUps(before, before)).toEqual([]);
+  });
+
+  it('longest streak looks across all weeks', () => {
+    const now = new Date(2026, 10, 11, 12).getTime(); // Wed 11 Nov 2026
+    const d = (y: number, m: number, day: number) => new Date(y, m, day, 10).getTime();
+    // Three good weeks in Oct (2 days each), a gap, then one good week, and this week not yet met.
+    const t = [d(2026, 9, 5), d(2026, 9, 6), d(2026, 9, 12), d(2026, 9, 13), d(2026, 9, 19), d(2026, 9, 20), d(2026, 10, 2), d(2026, 10, 3), d(2026, 10, 9)];
+    expect(longestStreak(t, 2, 0, now)).toBe(3);
+    expect(longestStreak([], 2, 0, now)).toBe(0);
   });
 });

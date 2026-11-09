@@ -11,6 +11,10 @@ import { ExerciseHistoryPage } from './features/progress/ExerciseHistory';
 import { ReportPage } from './features/strength/ReportPage';
 import { PlanPage } from './features/plan/PlanPage';
 import { ExercisesPage } from './features/plan/ExercisesPage';
+import { FitbodImportPage } from './features/settings/FitbodImportPage';
+import { MilestonesPage } from './features/log/MilestonesPage';
+import { StartRoute } from './features/workout/StartRoute';
+import { UpdateToast } from './components/UpdateToast';
 import { LogTab } from './features/log/LogTab';
 import { RestAlarm } from './features/session/RestTimer';
 import { useActive, useSettings, useWakeLock } from './lib/hooks';
@@ -24,6 +28,7 @@ export default function App() {
     // Hash routing works on any static host (GitHub Pages included) without server rewrites.
     <HashRouter>
       <RestAlarm active={active} />
+      <UpdateToast />
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<WorkoutTab />} />
@@ -38,6 +43,9 @@ export default function App() {
         <Route path="/report" element={<ReportPage />} />
         <Route path="/plan" element={<PlanPage />} />
         <Route path="/exercises" element={<ExercisesPage />} />
+        <Route path="/import-fitbod" element={<FitbodImportPage />} />
+        <Route path="/milestones" element={<MilestonesPage />} />
+        <Route path="/start" element={<StartRoute />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Routes>
     </HashRouter>

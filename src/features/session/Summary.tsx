@@ -5,6 +5,8 @@ import { db } from '../../db/db';
 import { deleteSession, saveSessionEdits, type EditGroup } from '../../db/actions';
 import type { PersonalRecord, SetLog, Units, WorkoutSession } from '../../db/types';
 import { useExercises, useSettings } from '../../lib/hooks';
+import { levelUps, lifetimeTotals } from '../../lib/stats';
+import { fmtTrack, HexBadge, TRACKS } from '../log/MilestonesPage';
 import { fmtBigWeight, fmtDate, fmtDuration, fmtTime, fmtWeight, fromDisplay, toDisplay } from '../../lib/format';
 import { Confirm, ExerciseThumb, NumberField, PageHeader } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
@@ -27,8 +29,10 @@ export function SummaryPage() {
     const records = session.exerciseOrder.length
       ? (await db.records.where('exerciseId').anyOf(session.exerciseOrder).toArray()).filter((r) => r.sessionId === id && r.previous !== undefined)
       : [];
-    return { session, sets, records };
-  }, [id]);
+    // For the milestone level-up: lifetime totals with and without this workout.
+    const all = isNew ? await db.sessions.toArray() : [];
+    return { session, sets, records, all };
+  }, [id, isNew]);
 
   if (data === undefined) return null;
   if (data === null) {
@@ -39,7 +43,8 @@ export function SummaryPage() {
       </div>
     );
   }
-  const { session, sets, records } = data;
+  const { session, sets, records, all } = data;
+  const ups = isNew ? levelUps(lifetimeTotals(all.filter((x) => x.id !== session.id), settings.lifetimeOffset), lifetimeTotals(all, settings.lifetimeOffset)) : [];
   const u = settings.units;
   const byExercise = groupSets(session, sets);
   const setEditing = (on: boolean) => setParams(on ? { edit: '1' } : {}, { replace: true });
@@ -70,6 +75,24 @@ export function SummaryPage() {
       />
       <div className="px-4">
         {isNew && <p className="text-sm font-semibold text-accent">Nice work 💪</p>}
+        {ups.length > 0 && (
+          <div className="pop-in mb-4 rounded-2xl bg-surface p-4 ring-1 ring-accent/50" role="status">
+            <p className="text-lg font-bold">Level up!</p>
+            <ul className="mt-2 space-y-2">
+              {ups.map((u) => {
+                const t = TRACKS.find((x) => x.id === u.track)!;
+                return (
+                  <li key={u.track} className="flex items-center gap-3">
+                    <HexBadge level={u.level} colour={t.colour} size={48} />
+                    <span className="text-sm"><span className="font-semibold">{t.label} level {u.level}</span>
+                      <span className="block text-muted">{u.next ? `Next at ${fmtTrack(u.track, u.next, settings.units)}` : 'Top level reached'}</span></span>
+                  </li>
+                );
+              })}
+            </ul>
+            <Link to="/milestones" className="mt-2 inline-block text-sm font-semibold text-accent">See milestones</Link>
+          </div>
+        )}
         <h1 className="text-3xl font-bold tracking-tight">{session.name}</h1>
         <p className="mt-1 text-sm text-muted">{fmtDate(session.startedAt)} · {fmtTime(session.startedAt)} · {fmtDuration(session.durationSec)}</p>
 

@@ -12,7 +12,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['icon.svg'],
       manifest: {
         name: 'Liftlog',
@@ -29,6 +29,8 @@ export default defineConfig({
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Long-press the app icon: jump straight into today's workout.
+        shortcuts: [{ name: 'Start workout', short_name: 'Start', url: './#/start', icons: [{ src: 'icon-192.png', sizes: '192x192', type: 'image/png' }] }],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],

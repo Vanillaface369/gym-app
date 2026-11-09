@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { updateSettings } from '../../db/actions';
 import { downloadBackup, importAll, resetAll } from '../../db/backup';
 import { useSettings } from '../../lib/hooks';
+import { useInstall } from '../../lib/pwa';
 import { fmtClock, fromDisplay, toDisplay } from '../../lib/format';
 import { Confirm, PageHeader } from '../../components/ui';
 import { ActionRow, Row, Section, Segmented, Toggle } from '../../components/form';
-import { IconChevronLeft, IconDownload, IconTrash, IconTrophy, IconUpload } from '../../components/icons';
+import { IconCheck, IconChevronLeft, IconDownload, IconTrash, IconTrophy, IconUpload } from '../../components/icons';
 
 export function SettingsPage() {
   const s = useSettings();
+  const install = useInstall();
   const nav = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingImport, setPendingImport] = useState<string | null>(null);
@@ -60,6 +62,16 @@ export function SettingsPage() {
           </Row>
         </Section>
 
+        <Section title="App">
+          {install.installed ? (
+            <ActionRow icon={<IconCheck size={20} />} label="Installed" hint="Opens from your home screen and works offline" disabled />
+          ) : install.canInstall ? (
+            <ActionRow icon={<IconDownload size={20} />} label="Install app" hint="Adds Liftlog to your home screen; works offline" onClick={install.install} />
+          ) : (
+            <ActionRow icon={<IconDownload size={20} />} label="Install app" hint="In Chrome: ⋮ menu → Add to Home screen" disabled />
+          )}
+        </Section>
+
         <Section title="Progress">
           <ActionRow icon={<IconTrophy size={20} />} label="Workout Report" hint="Muscle strength and volume" onClick={() => nav('/report')} />
         </Section>
@@ -75,7 +87,7 @@ export function SettingsPage() {
             }} />
           )}
           <ActionRow icon={<IconUpload size={20} />} label="Import data (JSON)" hint="Replaces everything on this phone" onClick={() => fileRef.current?.click()} />
-          <ActionRow icon={<IconUpload size={20} />} label="Import Fitbod CSV" hint="Coming in the Polish stage" disabled />
+          <ActionRow icon={<IconUpload size={20} />} label="Import Fitbod history (CSV)" hint="Preview before anything is saved" onClick={() => nav('/import-fitbod')} />
           <ActionRow icon={<IconTrash size={20} />} label="Reset all data" danger onClick={() => setConfirmReset(true)} />
           <input ref={fileRef} type="file" accept="application/json,.json" hidden
             onChange={async (e) => { const f = e.target.files?.[0]; if (f) setPendingImport(await f.text()); e.target.value = ''; }} />
