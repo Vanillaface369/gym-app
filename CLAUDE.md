@@ -4,13 +4,14 @@ Personal strength-training PWA (Fitbod replacement) for one user on an Android p
 Build it one stage at a time (SPEC §9). Before each stage: give the user a short plan and ask anything unclear; build only after approval.
 After each stage, tell the user what's new and what is not done yet.
 
-## Status
-- ✅ Stage 1: Core logging
-- ✅ Stage 2: Log tab
-- ⏭ **Next: Stage 3: Progress** (exercise history screen §3.5, e1RM chart, PRs, benchmark lifts on Body > Results §3.4)
-- Then 4 Targets · 5 Recovery · 6 Strength score · 7 My Plan · 8 Polish (milestones screen, streak polish, Fitbod CSV import, PWA install polish)
+This project is built in turns by two separate Claude sessions that don't share memory. SPEC.md is the brief. **Before starting, read the "Progress" section below. Before finishing, update it.**
 
-The user hasn't tested on their phone yet (they've been sick). Things still unverified on a real device: rest-timer vibration and beep, keep-screen-on (Wake Lock), Add to Home screen.
+## Progress
+- **Current stage:** Stage 3: Progress (not started yet).
+- **Done:** Stage 1 Core logging (commit `6831267`), Stage 2 Log tab (commit `327214b`). Both deployed via `main`.
+- **In progress / known bugs:** nothing in progress. No known bugs. Unverified on a real phone (the user hasn't tested yet): rest-timer vibration and beep, keep-screen-on (Wake Lock), Add to Home screen.
+- **Next step:** plan Stage 3 with the user, then build it: exercise history screen (SPEC §3.5), e1RM chart (add Recharts), PRs, benchmark lifts on Body > Results (§3.4). After that: 4 Targets · 5 Recovery · 6 Strength score · 7 My Plan · 8 Polish (milestones screen, streak polish, Fitbod CSV import, PWA install polish).
+- **Decisions made (and why):** see "Behaviour decisions already made" below. Add new ones there, each with a short reason.
 
 ## Run, test, deploy
 - `npm run dev` (http://localhost:5173, `--host` so the LAN works), `npm test` (vitest, pure logic in `src/lib/*.test.ts`), `npm run build` (`tsc -b` + vite).
