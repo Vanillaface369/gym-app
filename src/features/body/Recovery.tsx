@@ -5,14 +5,21 @@ import { db } from '../../db/db';
 import { MUSCLES, type Muscle } from '../../db/types';
 import { useExercises, useNow } from '../../lib/hooks';
 import { fmtShortDate, MUSCLE_LABEL, timeAgo } from '../../lib/format';
-import { band, FRESH, muscleRecovery, sessionDoses, type Band, type MuscleRecovery, type TrainedSession } from '../../lib/recovery';
+import { FRESH, muscleRecovery, sessionDoses, type MuscleRecovery, type TrainedSession } from '../../lib/recovery';
 import { fmtSets } from '../../lib/targets';
 import { Sheet } from '../../components/ui';
 import { IconChevronRight, IconRotate } from '../../components/icons';
 import { BodyMap } from './BodyMap';
 
-const BAND_COLOUR: Record<Band, string> = { low: 'var(--color-danger)', mid: 'var(--color-warn)', fresh: 'var(--color-accent)' };
-const BAND_LABEL: Record<Band, string> = { low: 'Under 50%', mid: '50–89%', fresh: 'Fresh 90%+' };
+/**
+ * Recovery colour fades red (0%) -> amber (50%) -> lime (fresh, 90%+), mixed in OKLab so the in-between shades stay bright.
+ */
+function recoveryColour(pct: number): string {
+  if (pct >= FRESH) return 'var(--color-accent)';
+  if (pct <= 50) return `color-mix(in oklab, var(--color-warn) ${Math.round((Math.max(0, pct) / 50) * 100)}%, var(--color-danger))`;
+  return `color-mix(in oklab, var(--color-accent) ${Math.round(((pct - 50) / (FRESH - 50)) * 100)}%, var(--color-warn))`;
+}
+const GRADIENT = `linear-gradient(in oklab to right, var(--color-danger), var(--color-warn) ${50}%, var(--color-accent) ${FRESH}%)`;
 const LOOKBACK_DAYS = 14;
 
 function fmtHours(h: number): string {
@@ -49,7 +56,7 @@ export function Recovery() {
   const overrides = new Map(data.overrides.map((o) => [o.muscle, o]));
   const recs = new Map<Muscle, MuscleRecovery>(MUSCLES.map((m) => [m, muscleRecovery(m, trained, overrides.get(m), now)]));
   const fresh = [...recs.values()].filter((r) => r.percent >= FRESH).length;
-  const colour = (m: Muscle) => BAND_COLOUR[band(recs.get(m)!.percent)];
+  const colour = (m: Muscle) => recoveryColour(recs.get(m)!.percent);
   const pick = (ms: Muscle[]) => ms.reduce((a, b) => (recs.get(b)!.percent < recs.get(a)!.percent ? b : a));
   const list = [...recs.values()].sort((a, b) => a.percent - b.percent || MUSCLE_LABEL[a.muscle].localeCompare(MUSCLE_LABEL[b.muscle]));
 
@@ -77,11 +84,10 @@ export function Recovery() {
         <p className="absolute right-0 bottom-3 text-xs font-semibold tracking-wider text-muted uppercase">{side}</p>
       </div>
       <div>
-        <ul className="mt-3 flex justify-center gap-4 text-xs text-muted">
-          {(['low', 'mid', 'fresh'] as Band[]).map((b) => (
-            <li key={b} className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: BAND_COLOUR[b] }} />{BAND_LABEL[b]}</li>
-          ))}
-        </ul>
+        <div className="mx-auto mt-3 max-w-60">
+          <div className="h-2 rounded-full" style={{ background: GRADIENT }} />
+          <div className="mt-1 flex justify-between text-xs text-muted"><span>0%</span><span>50%</span><span>Fresh 90%+</span></div>
+        </div>
       </div>
 
       <section className="mt-6">
@@ -92,7 +98,7 @@ export function Recovery() {
               <button onClick={() => setSelected(r.muscle)} className="flex w-full items-center gap-3 px-4 py-3 text-left active:bg-surface-2">
                 <span className="w-28 shrink-0 truncate">{MUSCLE_LABEL[r.muscle]}{r.overridden && <span className="text-muted"> *</span>}</span>
                 <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
-                  <span className="block h-full rounded-full" style={{ width: `${r.percent}%`, background: BAND_COLOUR[band(r.percent)] }} />
+                  <span className="block h-full rounded-full" style={{ width: `${r.percent}%`, background: recoveryColour(r.percent) }} />
                 </span>
                 <span className="tabular w-11 text-right text-sm font-semibold">{r.percent}%</span>
               </button>
@@ -115,7 +121,6 @@ function MuscleSheet({ rec, sessions, onClose, now }: { rec: MuscleRecovery | nu
   if (!rec) return <Sheet open={false} onClose={onClose}>{null}</Sheet>;
 
   const hits = sessions.filter((s) => s.doses[rec.muscle]).slice(0, 5);
-  const b = band(rec.percent);
   const save = async () => {
     await db.recoveryOverrides.put({ muscle: rec.muscle, percent: value, setAt: Date.now() });
     onClose();
@@ -127,7 +132,7 @@ function MuscleSheet({ rec, sessions, onClose, now }: { rec: MuscleRecovery | nu
   return (
     <Sheet open onClose={onClose} title={MUSCLE_LABEL[rec.muscle]}>
       <div className="flex items-baseline gap-3">
-        <span className="tabular text-5xl font-bold" style={{ color: BAND_COLOUR[b] }}>{rec.percent}%</span>
+        <span className="tabular text-5xl font-bold" style={{ color: recoveryColour(rec.percent) }}>{rec.percent}%</span>
         <span className="text-sm text-muted">recovered</span>
       </div>
       <p className="mt-1 text-sm text-muted">
