@@ -58,6 +58,7 @@ This project is built in turns by two separate Claude sessions that don't share 
 - A manual recovery value (`recoveryOverrides`) is a starting point that keeps rising at the muscle's normal pace. It's dropped once a workout that trains that muscle **finishes after** it was set. The user chose this over a value that stays frozen.
 - Body map colours are three bands (red / amber / lime, new token `--color-warn`), always shown with the % as text. The user chose this over a smooth gradient.
 - Recovery maths clamps "time since" at 0, because `useNow` ticks once a minute and a just-saved workout or override can look slightly in the future.
+- No login screen. The user asked for one, then dropped it: on a static GitHub Pages site with a public repo, a login running on the phone can't hide anything (the code and shapes are public anyway), and all data stays on the phone already.
 - Placeholders still to replace: the Strength score card on Body > Results (stage 6), "Pick muscle groups" (stage 7), "Import Fitbod CSV" (stage 8), the Milestones stat tap (stage 8), and "My Plan" (it opens Settings until stage 7).
 - Pull Day's "+1 more" exercise from SPEC §7 is unknown; it was left out. Push Day, Seated Leg Curl and Leg Press weights start blank.
 
