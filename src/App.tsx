@@ -5,7 +5,7 @@ import { ActiveWorkoutPage } from './features/session/ActiveWorkout';
 import { ExerciseLogPage } from './features/session/ExerciseLog';
 import { SummaryPage } from './features/session/Summary';
 import { SettingsPage } from './features/settings/SettingsPage';
-import { TargetsTab } from './features/log/Placeholders';
+import { TargetsTab } from './features/targets/TargetsTab';
 import { BodyTab } from './features/body/BodyTab';
 import { ExerciseHistoryPage } from './features/progress/ExerciseHistory';
 import { LogTab } from './features/log/LogTab';

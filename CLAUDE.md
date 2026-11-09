@@ -7,10 +7,10 @@ After each stage, tell the user what's new and what is not done yet.
 This project is built in turns by two separate Claude sessions that don't share memory. SPEC.md is the brief. **Before starting, read the "Progress" section below. Before finishing, update it.**
 
 ## Progress
-- **Current stage:** Stage 3: Progress is done and live (`e16dd36`). Stage 4 is next.
-- **Done:** Stage 1 Core logging (`6831267`), Stage 2 Log tab (`327214b`), both live. Stage 3 Progress: exercise history screen (`/exercise/:id`: range toggle, e1RM line chart, PR + average, records, past sessions), Body tab with Results/Recovery sub-tabs and editable benchmark lifts. History is reachable from the History chip while logging, exercise names on a workout summary, and benchmark cards.
+- **Current stage:** Stage 4: Targets is built and committed locally, not pushed yet. Stage 5 is next.
+- **Done:** Stage 1 Core logging (`6831267`), Stage 2 Log tab (`327214b`), both live. Stage 3 Progress: exercise history screen (`/exercise/:id`: range toggle, e1RM line chart, PR + average, records, past sessions), Body tab with Results/Recovery sub-tabs and editable benchmark lifts. History is reachable from the History chip while logging, exercise names on a workout summary, and benchmark cards. Stage 4 Targets: hexagon ring (two sides per group, coloured push/pull/legs), Push/Pull/Legs rows that expand to per-muscle sets, 9-week history row (tap a week to view it), "Edit targets" sheet.
 - **In progress / known bugs:** nothing in progress. No known bugs. Unverified on a real phone (the user hasn't tested yet): rest-timer vibration and beep, keep-screen-on (Wake Lock), Add to Home screen, and the Stage 3 chart's touch tooltip.
-- **Next step:** plan Stage 4 (Targets tab: weekly set targets, hexagon ring, history; SPEC §3.7 and §5) with the user. After that: 5 Recovery · 6 Strength score · 7 My Plan · 8 Polish (milestones screen, streak polish, Fitbod CSV import, PWA install polish).
+- **Next step:** ask the user to push Stage 4 if not already done, then plan Stage 5 (Recovery: front/back body-map SVG, recovery model, tap a muscle, manual override; SPEC §3.4 Recovery and §5) with the user. After that: 6 Strength score · 7 My Plan · 8 Polish (milestones screen, streak polish, Fitbod CSV import, PWA install polish).
 - **Decisions made (and why):** see "Behaviour decisions already made" below. Add new ones there, each with a short reason.
 
 ## Run, test, deploy
@@ -34,7 +34,7 @@ This project is built in turns by two separate Claude sessions that don't share 
 - `src/db/seed.ts`: the user's exercises, templates, working weights, Lat Pulldown e1RM PR 90.7 kg, and Fitbod lifetime totals (206 workouts / 932,150 kg / 34,468 kcal) in `settings.lifetimeOffset`.
 - `src/db/actions.ts`: all writes: building a workout from a template (pre-fills from last session; Max Effort = ramp to a top set), active-workout mutations, rest timer, `finishWorkout` (writes sessions/sets/records), `saveSessionEdits`, `createManualSession`, `deleteSession`, `rebuildRecords`, template edits, JSON workout import.
 - `src/db/backup.ts`: full JSON export/import/reset. **Any new table must be added to `TABLES` in db.ts** so backups include it.
-- `src/lib/calc.ts`: e1RM (Epley), volume, calories, max-effort ramp, `detectRecords`. `src/lib/stats.ts`: weeks, streak, calendar grid, milestone tiers. `src/lib/progress.ts`: per-session e1RM points, range filtering, monthly bests, all-time bests, benchmark picking.
+- `src/lib/calc.ts`: e1RM (Epley), volume, calories, max-effort ramp, `detectRecords`. `src/lib/stats.ts`: weeks, streak, calendar grid, milestone tiers. `src/lib/progress.ts`: per-session e1RM points, range filtering, monthly bests, all-time bests, benchmark picking. `src/lib/targets.ts`: weekly set counting and % per group.
 - `src/lib/hooks.ts`: `useSettings`, `useActive`, `useExercises`, `useNow`, `useWakeLock`, audio unlock/beep, vibrate.
 - `src/features/*`: screens. `src/components/`: shared UI (`Sheet`, `Confirm`, `Chip`, `NumberField`, `ExercisePicker`, `RestPicker`, icons, `Layout`).
 
@@ -50,7 +50,10 @@ This project is built in turns by two separate Claude sessions that don't share 
 - Exercise history: e1RM counts every working set (warm-ups skipped), including Max Effort singles. Week/Month plot every session; 6 Month/Year plot each month's best. The range opens on the shortest one with at least 2 points, so the first view is a line, not a dot.
 - A seeded e1RM record (no `sessionId`, from Fitbod) counts as the PR, labelled "from Fitbod", when it beats everything logged. It has no date, so it isn't charted until the Fitbod import (stage 8). The user chose this.
 - Benchmark lifts default to the 5 most-used exercises (`useCount`). Once the user edits them, `Settings.benchmarkIds` holds the pinned list. "Use most used" clears it again.
-- Placeholders still to replace: Targets tab (stage 4), Body > Recovery (stage 5), the Strength score card on Body > Results (stage 6), "Pick muscle groups" (stage 7), "Import Fitbod CSV" (stage 8), the Milestones stat tap (stage 8), and "My Plan" (it opens Settings until stage 7).
+- Weekly targets: each working set counts **once** toward its exercise's category (push/pull/legs); core/other count nowhere. The per-muscle breakdown uses SPEC's primary 1 / secondary 0.5, so it doesn't sum to the group total (a note on screen says so). Summing muscle credits instead would make one bench set count ~2 push sets. The user chose this.
+- Each group counts toward the overall % only up to its target, so extra push can't hide missing legs. Sets go into the week their workout **started** in.
+- Targets are edited from the Targets tab ("Edit targets") for now. My Plan (stage 7) should link to the same editor, not duplicate it.
+- Placeholders still to replace: Body > Recovery (stage 5), the Strength score card on Body > Results (stage 6), "Pick muscle groups" (stage 7), "Import Fitbod CSV" (stage 8), the Milestones stat tap (stage 8), and "My Plan" (it opens Settings until stage 7).
 - Pull Day's "+1 more" exercise from SPEC §7 is unknown; it was left out. Push Day, Seated Leg Curl and Leg Press weights start blank.
 
 ## Testing tips
