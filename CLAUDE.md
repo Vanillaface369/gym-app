@@ -7,9 +7,9 @@ After each stage, tell the user what's new and what is not done yet.
 This project is built in turns by two separate Claude sessions that don't share memory. SPEC.md is the brief. **Before starting, read the "Progress" section below. Before finishing, update it.**
 
 ## Progress
-- **Current stage:** Stage 5: Recovery is done and live (`f261245`). Stage 6 is next.
+- **Current stage:** Stage 5 is live. Since then the body map was re-traced from the user's reference screenshots and committed **locally only, not pushed**: the user must first decide how to handle the public repo/site, since the permission covers personal use only. Don't push until they decide. Stage 6 is next.
 - **Done:** Stage 1 Core logging (`6831267`), Stage 2 Log tab (`327214b`), both live. Stage 3 Progress: exercise history screen (`/exercise/:id`: range toggle, e1RM line chart, PR + average, records, past sessions), Body tab with Results/Recovery sub-tabs and editable benchmark lifts. History is reachable from the History chip while logging, exercise names on a workout summary, and benchmark cards. Stage 4 Targets: hexagon ring (two sides per group, coloured push/pull/legs), Push/Pull/Legs rows that expand to per-muscle sets, 9-week history row (tap a week to view it), "Edit targets" sheet. Stage 5 Recovery: Body > Recovery with last-workout and fresh-muscle stats, original front/back body map (`BodyMap.tsx`, coloured red <50 / amber 50–89 / lime 90+), muscle list sorted least recovered first, and a muscle sheet (recovery %, time to full, recent workouts, set-by-hand slider).
-- **In progress / known bugs:** nothing in progress. No known bugs. Unverified on a real phone (the user hasn't tested yet): rest-timer vibration and beep, keep-screen-on (Wake Lock), Add to Home screen, the Stage 3 chart's touch tooltip, and tapping small muscles on the body map with a finger.
+- **In progress / known bugs:** waiting on the user: push the traced body map or not (see Current stage). No known bugs. Unverified on a real phone (the user hasn't tested yet): rest-timer vibration and beep, keep-screen-on (Wake Lock), Add to Home screen, the Stage 3 chart's touch tooltip, and tapping small muscles on the body map with a finger.
 - **Next step:** plan Stage 6 (Strength score on Body > Results: overall score, Push/Pull/Legs cards with sub-groups and sparklines, trend badges; plus the Workout Report with muscle strength and volume carousels; SPEC §3.4, §3.9a, §5) with the user. After that: 7 My Plan · 8 Polish (milestones screen, streak polish, Fitbod CSV import, PWA install polish).
 - **Decisions made (and why):** see "Behaviour decisions already made" below. Add new ones there, each with a short reason.
 
@@ -25,7 +25,7 @@ This project is built in turns by two separate Claude sessions that don't share 
 - Recharts 3 is installed (stage 3). The e1RM chart is `src/features/progress/E1rmChart.tsx`, which also has a plain-SVG `Sparkline` for small cards.
 - **All weights are stored in kg.** Convert only for display/input with `toDisplay`/`fromDisplay`/`fmtWeight` in `src/lib/format.ts`. Australian locale (`en-AU`), dd/mm.
 - IDs: `uid()` from `format.ts` (not `crypto.randomUUID`, which fails on plain-http LAN testing). Seeded exercise ids are slugs (`lat-pulldown`).
-- Dark theme, single accent `#b6f23a` (lime). Original design only: no Fitbod branding, art, photos or videos. Exercise thumbnails are category-coloured initials tiles (`ExerciseThumb`).
+- Dark theme, single accent `#b6f23a` (lime). Original design only: no Fitbod branding, art, photos or videos. **One exception, at the user's request (11/2026):** the body map shapes (`src/features/body/bodyShapes.ts`) are traced from Fitbod screenshots the user supplied. The user says Fitbod support allowed this for personal use only. Exercise thumbnails are category-coloured initials tiles (`ExerciseThumb`).
 - Screens are mobile-first, max-w-lg, bottom tab bar, a fixed bottom action bar with `pb-safe`.
 
 ## Code map
@@ -35,6 +35,7 @@ This project is built in turns by two separate Claude sessions that don't share 
 - `src/db/actions.ts`: all writes: building a workout from a template (pre-fills from last session; Max Effort = ramp to a top set), active-workout mutations, rest timer, `finishWorkout` (writes sessions/sets/records), `saveSessionEdits`, `createManualSession`, `deleteSession`, `rebuildRecords`, template edits, JSON workout import.
 - `src/db/backup.ts`: full JSON export/import/reset. **Any new table must be added to `TABLES` in db.ts** so backups include it.
 - `src/lib/calc.ts`: e1RM (Epley), volume, calories, max-effort ramp, `detectRecords`. `src/lib/stats.ts`: weeks, streak, calendar grid, milestone tiers. `src/lib/progress.ts`: per-session e1RM points, range filtering, monthly bests, all-time bests, benchmark picking. `src/lib/targets.ts`: weekly set counting and % per group. `src/lib/recovery.ts`: fatigue doses, hours needed, recovery % with overrides (reuse it in stage 7 workout generation).
+- `src/features/body/bodyShapes.ts` is generated by `tools/bodymap/trace.py` + `gen.py`: run them in a folder holding the two reference screenshots as `front.webp` / `back.webp` (891x2000; not in the repo). `gen.py` maps contour numbers to muscles. A region can cover several muscles, and it shows the least recovered one.
 - `src/lib/hooks.ts`: `useSettings`, `useActive`, `useExercises`, `useNow`, `useWakeLock`, audio unlock/beep, vibrate.
 - `src/features/*`: screens. `src/components/`: shared UI (`Sheet`, `Confirm`, `Chip`, `NumberField`, `ExercisePicker`, `RestPicker`, icons, `Layout`).
 

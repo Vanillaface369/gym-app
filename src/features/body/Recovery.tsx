@@ -50,6 +50,7 @@ export function Recovery() {
   const recs = new Map<Muscle, MuscleRecovery>(MUSCLES.map((m) => [m, muscleRecovery(m, trained, overrides.get(m), now)]));
   const fresh = [...recs.values()].filter((r) => r.percent >= FRESH).length;
   const colour = (m: Muscle) => BAND_COLOUR[band(recs.get(m)!.percent)];
+  const pick = (ms: Muscle[]) => ms.reduce((a, b) => (recs.get(b)!.percent < recs.get(a)!.percent ? b : a));
   const list = [...recs.values()].sort((a, b) => a.percent - b.percent || MUSCLE_LABEL[a.muscle].localeCompare(MUSCLE_LABEL[b.muscle]));
 
   return (
@@ -65,15 +66,18 @@ export function Recovery() {
         </div>
       </div>
 
-      <div className="relative mt-3 rounded-2xl bg-surface p-3">
-        <div className="mx-auto h-[23rem] w-[11.5rem]">
-          <BodyMap side={side} colour={colour} selected={selected} onSelect={setSelected} />
+      <div className="relative mt-4">
+        <div className="mx-auto h-[min(31rem,62vh)] aspect-[558/1161]">
+          <BodyMap side={side} colour={colour} pick={pick} selected={selected} onSelect={setSelected} />
         </div>
         <button onClick={() => setSide(side === 'front' ? 'back' : 'front')} aria-label={`Show ${side === 'front' ? 'back' : 'front'}`}
-          className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full bg-surface-2 px-3 py-2 text-sm font-semibold active:scale-95">
-          <IconRotate size={16} />{side === 'front' ? 'Front' : 'Back'}
+          className="absolute bottom-1 left-0 flex h-12 w-12 items-center justify-center rounded-full bg-surface active:scale-95">
+          <IconRotate size={22} />
         </button>
-        <ul className="mt-2 flex justify-center gap-4 text-xs text-muted">
+        <p className="absolute right-0 bottom-3 text-xs font-semibold tracking-wider text-muted uppercase">{side}</p>
+      </div>
+      <div>
+        <ul className="mt-3 flex justify-center gap-4 text-xs text-muted">
           {(['low', 'mid', 'fresh'] as Band[]).map((b) => (
             <li key={b} className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: BAND_COLOUR[b] }} />{BAND_LABEL[b]}</li>
           ))}
