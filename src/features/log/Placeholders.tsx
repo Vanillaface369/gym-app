@@ -10,5 +10,4 @@ function ComingSoon({ title, stage, children }: { title: string; stage: string; 
   );
 }
 
-export const BodyTab = () => <ComingSoon title="Body" stage="stage 5 (Recovery) and stage 6 (Strength score)" />;
 export const TargetsTab = () => <ComingSoon title="Targets" stage="stage 4 (Weekly set targets)" />;

@@ -126,6 +126,8 @@ export interface Settings {
   activeGymProfileId: string;
   /** Template picked via Switch; cleared after a workout is finished. */
   selectedTemplateId?: string;
+  /** Exercises pinned as benchmark lifts on Body > Results. Unset = the most-used exercises. */
+  benchmarkIds?: string[];
   /** Lifetime totals carried over from before this app (milestones). */
   lifetimeOffset: { workouts: number; volumeKg: number; calories: number };
 }

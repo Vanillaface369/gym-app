@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
-import { activeActions, recentSessionsFor } from '../../db/actions';
+import { activeActions } from '../../db/actions';
 import { unlockAudio, useActive, useExercises, useSettings } from '../../lib/hooks';
-import { fmtClock, fmtShortDate, fmtWeight, fromDisplay, MUSCLE_LABEL, toDisplay } from '../../lib/format';
+import { fmtClock, fromDisplay, MUSCLE_LABEL, toDisplay } from '../../lib/format';
 import { Chip, NumberField, PageHeader, Sheet, SheetRow } from '../../components/ui';
 import { ExercisePicker, RestPicker } from '../../components/ExercisePicker';
 import { IconCheck, IconChevronLeft, IconEdit, IconHistory, IconInfo, IconLink, IconMinus, IconMore, IconPlus, IconSwap, IconTimer, IconTrash } from '../../components/icons';
@@ -17,7 +16,6 @@ export function ExerciseLogPage() {
   const { map } = useExercises();
   const nav = useNavigate();
   const [restOpen, setRestOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [howToOpen, setHowToOpen] = useState(false);
@@ -54,7 +52,7 @@ export function ExerciseLogPage() {
 
         <div className="no-scrollbar -mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1">
           <Chip onClick={() => setRestOpen(true)}><IconTimer size={16} />{fmtClock(item.restSec)}</Chip>
-          <Chip onClick={() => setHistoryOpen(true)}><IconHistory size={16} />History</Chip>
+          <Chip onClick={() => nav(`/exercise/${item.exerciseId}`)}><IconHistory size={16} />History</Chip>
           <Chip onClick={() => setReplaceOpen(true)}><IconSwap size={16} />Replace</Chip>
           <Chip onClick={() => setMoreOpen(true)}><IconMore size={16} />More</Chip>
         </div>
@@ -111,7 +109,6 @@ export function ExerciseLogPage() {
       <RestTimerUI active={active} />
 
       <RestPicker open={restOpen} onClose={() => setRestOpen(false)} value={item.restSec} onChange={(s) => activeActions.setRest(item.key, s)} />
-      <HistorySheet open={historyOpen} onClose={() => setHistoryOpen(false)} exerciseId={item.exerciseId} units={u} />
       <ExercisePicker open={replaceOpen} title="Replace with" onClose={() => setReplaceOpen(false)}
         onPick={async (e) => { await activeActions.replaceItem(item.key, e); setReplaceOpen(false); }} />
 
@@ -138,25 +135,6 @@ export function ExerciseLogPage() {
           onClick={() => { activeActions.removeSet(item.key, removeSetIdx!); setRemoveSetIdx(null); }} />
       </Sheet>
     </div>
-  );
-}
-
-function HistorySheet({ open, onClose, exerciseId, units }: { open: boolean; onClose: () => void; exerciseId: string; units: 'kg' | 'lb' }) {
-  const sessions = useLiveQuery(async () => (open ? recentSessionsFor(exerciseId, 12) : []), [open, exerciseId]) ?? [];
-  return (
-    <Sheet open={open} onClose={onClose} title="History">
-      {!sessions.length && <p className="py-6 text-center text-muted">No history for this exercise yet.</p>}
-      <ul className="divide-y divide-line">
-        {sessions.map((ss) => (
-          <li key={ss[0].sessionId} className="py-3">
-            <p className="text-sm text-muted">{fmtShortDate(ss[0].completedAt)}</p>
-            <p className="tabular mt-0.5">{ss.map((s) => `${s.reps} × ${fmtWeight(s.weightKg, units)}`).join(' · ')}</p>
-            <p className="text-xs text-muted">Best est. 1RM {fmtWeight(Math.max(...ss.map((s) => s.e1rm)), units)}</p>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-3 text-center text-xs text-muted">Charts and PRs arrive in the Progress stage.</p>
-    </Sheet>
   );
 }
 

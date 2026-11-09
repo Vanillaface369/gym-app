@@ -8,7 +8,7 @@ import { useExercises, useSettings } from '../../lib/hooks';
 import { fmtBigWeight, fmtDate, fmtDuration, fmtTime, fmtWeight, fromDisplay, toDisplay } from '../../lib/format';
 import { Confirm, ExerciseThumb, NumberField, PageHeader } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
-import { IconChevronLeft, IconDown, IconEdit, IconFlame, IconPlus, IconTrash, IconTrophy, IconUp, IconWeight, IconX } from '../../components/icons';
+import { IconChevronLeft, IconChevronRight, IconDown, IconEdit, IconFlame, IconPlus, IconTrash, IconTrophy, IconUp, IconWeight, IconX } from '../../components/icons';
 
 export function SummaryPage() {
   const { id = '' } = useParams();
@@ -91,8 +91,11 @@ export function SummaryPage() {
             return (
               <li key={exerciseId} className="rounded-2xl bg-surface p-4">
                 <div className="flex items-center gap-3">
-                  <ExerciseThumb ex={ex} size={40} />
-                  <p className="flex-1 font-semibold">{ex?.name ?? 'Unknown exercise'}</p>
+                  <Link to={`/exercise/${exerciseId}`} className="flex min-w-0 flex-1 items-center gap-3">
+                    <ExerciseThumb ex={ex} size={40} />
+                    <p className="flex-1 truncate font-semibold">{ex?.name ?? 'Unknown exercise'}</p>
+                    <IconChevronRight size={18} className="shrink-0 text-muted" />
+                  </Link>
                   {recs.length > 0 && <IconTrophy size={18} className="text-accent" aria-label="New record" />}
                 </div>
                 <ol className="tabular mt-3 space-y-1 text-sm">
