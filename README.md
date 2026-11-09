@@ -20,10 +20,10 @@ Pushing to `main` on GitHub builds and publishes to GitHub Pages via `.github/wo
 
 - `src/db/` – Dexie schema (`db.ts`), seed exercises/templates/weights (`seed.ts`), all data changes (`actions.ts`), JSON backup (`backup.ts`)
 - `src/lib/` – calculations (`calc.ts`), formatting/units (`format.ts`), React hooks incl. wake lock and timer sound (`hooks.ts`)
-- `src/features/` – screens: `workout/` (Workout tab, Switch sheet), `session/` (active workout, set logging, rest timer, summary), `settings/`, `log/` (placeholder tabs)
+- `src/features/` – screens: `workout/` (Workout tab, Switch sheet), `session/` (active workout, set logging, rest timer, summary), `settings/`, `log/` (Log tab, past-workout sheet, placeholder tabs)
 - `src/components/` – shared UI (sheets, chips, icons, exercise picker, tab layout)
 
 ## Build stages
 
-1. ✅ Core logging
-2. Log tab · 3. Progress · 4. Targets · 5. Recovery · 6. Strength score · 7. My Plan · 8. Polish
+1. ✅ Core logging · 2. ✅ Log tab
+3. Progress · 4. Targets · 5. Recovery · 6. Strength score · 7. My Plan · 8. Polish

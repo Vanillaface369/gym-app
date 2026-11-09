@@ -77,7 +77,7 @@ export function SettingsPage() {
           {msg && <p className={`px-1 pt-2 text-sm ${msg.error ? 'text-danger' : 'text-accent'}`}>{msg.text}</p>}
         </Section>
 
-        <p className="pb-4 text-center text-xs text-muted">Stage 1 · core logging</p>
+        <p className="pb-4 text-center text-xs text-muted">Stage 2 · Log tab</p>
       </div>
 
       <Confirm open={pendingImport !== null} title="Replace all data?" danger confirmLabel="Import"

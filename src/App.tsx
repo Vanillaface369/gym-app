@@ -5,7 +5,8 @@ import { ActiveWorkoutPage } from './features/session/ActiveWorkout';
 import { ExerciseLogPage } from './features/session/ExerciseLog';
 import { SummaryPage } from './features/session/Summary';
 import { SettingsPage } from './features/settings/SettingsPage';
-import { BodyTab, LogTab, TargetsTab } from './features/log/Placeholders';
+import { BodyTab, TargetsTab } from './features/log/Placeholders';
+import { LogTab } from './features/log/LogTab';
 import { RestAlarm } from './features/session/RestTimer';
 import { useActive, useSettings, useWakeLock } from './lib/hooks';
 

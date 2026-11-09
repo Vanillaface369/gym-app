@@ -393,3 +393,72 @@ export async function importWorkoutJson(text: string): Promise<WorkoutTemplate> 
   await db.templates.add(t);
   return t;
 }
+
+// ---------- Editing finished workouts & logging past ones ----------
+export interface EditGroup { exerciseId: string; sets: { reps: number; weightKg: number }[] }
+export interface SessionMeta { name: string; startedAt: number; durationSec: number }
+
+/** Rewrite a finished workout's details and sets, then recompute its totals and the affected PRs. */
+export async function saveSessionEdits(sessionId: string, meta: SessionMeta, groups: EditGroup[]) {
+  const settings = await getSettings();
+  await db.transaction('rw', [db.sessions, db.sets, db.records, db.exercises], async () => {
+    const session = await db.sessions.get(sessionId);
+    if (!session) throw new Error('Workout not found');
+    const oldSets = await db.sets.where('sessionId').equals(sessionId).toArray();
+    const oldEx = new Set(oldSets.map((s) => s.exerciseId));
+
+    const kept = groups.map((g) => ({ ...g, sets: g.sets.filter((s) => s.reps > 0) })).filter((g) => g.sets.length);
+    const total = kept.reduce((t, g) => t + g.sets.length, 0);
+    const step = total > 1 ? (meta.durationSec * 1000) / total : 0;
+    let n = 0;
+    const setLogs: SetLog[] = kept.flatMap((g) =>
+      g.sets.map((s, i) => ({
+        id: uid(), sessionId, exerciseId: g.exerciseId, setIndex: i, reps: s.reps, weightKg: s.weightKg,
+        isWarmup: false, completedAt: meta.startedAt + Math.round(step * n++), e1rm: round1(e1rm(s.weightKg, s.reps)),
+      })),
+    );
+    const newEx = new Set(setLogs.map((s) => s.exerciseId));
+
+    await db.sets.where('sessionId').equals(sessionId).delete();
+    await db.sets.bulkAdd(setLogs);
+    await db.sessions.put({
+      ...session,
+      name: meta.name.trim() || session.name,
+      startedAt: meta.startedAt,
+      durationSec: meta.durationSec,
+      endedAt: meta.startedAt + meta.durationSec * 1000,
+      caloriesEst: caloriesEst(settings.bodyweightKg, meta.durationSec),
+      volumeKg: Math.round(volumeKg(setLogs)),
+      exerciseOrder: [...newEx],
+    });
+    for (const id of oldEx) if (!newEx.has(id)) await bumpUse(id, -1);
+    for (const id of newEx) if (!oldEx.has(id)) await bumpUse(id, 1);
+    await rebuildRecords([...new Set([...oldEx, ...newEx])]);
+  });
+}
+
+async function bumpUse(exerciseId: string, by: number) {
+  const ex = await db.exercises.get(exerciseId);
+  if (ex) await db.exercises.update(exerciseId, { useCount: Math.max(0, ex.useCount + by) });
+}
+
+/** Log a workout after the fact. With a template, its exercises and planned sets are filled in to edit. */
+export async function createManualSession(meta: SessionMeta, template?: WorkoutTemplate): Promise<string> {
+  const settings = await getSettings();
+  const id = uid();
+  await db.sessions.add({
+    id, name: meta.name.trim() || template?.name || 'Workout', templateId: template?.id, splitDay: template?.splitDay,
+    startedAt: meta.startedAt, endedAt: meta.startedAt + meta.durationSec * 1000, durationSec: meta.durationSec,
+    gymProfileId: settings.activeGymProfileId, caloriesEst: 0, volumeKg: 0, recordsCount: 0, exerciseOrder: [],
+  });
+  const groups: EditGroup[] = [];
+  if (template) {
+    for (const t of [...template.items].sort((a, b) => a.order - b.order)) {
+      const it = await buildItem(t);
+      groups.push({ exerciseId: it.exerciseId, sets: it.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg })) });
+    }
+  }
+  const s = await db.sessions.get(id);
+  await saveSessionEdits(id, { ...meta, name: s!.name }, groups);
+  return id;
+}
