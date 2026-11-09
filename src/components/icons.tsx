@@ -23,6 +23,7 @@ export const IconMinus = mk(<path d="M5 12h14" />);
 export const IconChevronLeft = mk(<path d="M15 5l-7 7 7 7" />);
 export const IconChevronRight = mk(<path d="M9 5l7 7-7 7" />);
 export const IconSwap = mk(<path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7" />);
+export const IconRotate = mk(<><path d="M20 12a8 8 0 1 1-2.3-5.6" /><path d="M20 4v5h-5" /></>);
 export const IconTrash = mk(<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />);
 export const IconHistory = mk(<><path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" /><path d="M3 4v4h4M12 8v4l3 2" /></>);
 export const IconInfo = mk(<><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7.5v.5" /></>);

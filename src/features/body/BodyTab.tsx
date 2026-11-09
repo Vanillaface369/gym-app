@@ -9,6 +9,7 @@ import { allTimeBests, pickBenchmarks } from '../../lib/progress';
 import { ExerciseThumb, Sheet } from '../../components/ui';
 import { IconCheck, IconChevronRight, IconEdit } from '../../components/icons';
 import { Sparkline } from '../progress/E1rmChart';
+import { Recovery } from './Recovery';
 import { loadProgress, type ExerciseProgress } from '../progress/data';
 
 export function BodyTab() {
@@ -23,11 +24,7 @@ export function BodyTab() {
             className={`rounded-lg py-2 text-sm font-semibold capitalize ${tab === t ? 'bg-surface-2 text-ink' : 'text-muted'}`}>{t}</button>
         ))}
       </div>
-      {tab === 'results' ? <Results /> : (
-        <div className="mt-6 rounded-2xl bg-surface p-5 text-muted">
-          <p>The body map and muscle recovery arrive in <span className="font-semibold text-ink">stage 5</span>.</p>
-        </div>
-      )}
+      {tab === 'results' ? <Results /> : <Recovery />}
     </div>
   );
 }
