@@ -7,10 +7,10 @@ After each stage, tell the user what's new and what is not done yet.
 This project is built in turns by two separate Claude sessions that don't share memory. SPEC.md is the brief. **Before starting, read the "Progress" section below. Before finishing, update it.**
 
 ## Progress
-- **Current stage:** Stage 4: Targets is built and committed locally, not pushed yet. Stage 5 is next.
+- **Current stage:** Stage 4: Targets is done and live (`3ecf855`). Stage 5 is next.
 - **Done:** Stage 1 Core logging (`6831267`), Stage 2 Log tab (`327214b`), both live. Stage 3 Progress: exercise history screen (`/exercise/:id`: range toggle, e1RM line chart, PR + average, records, past sessions), Body tab with Results/Recovery sub-tabs and editable benchmark lifts. History is reachable from the History chip while logging, exercise names on a workout summary, and benchmark cards. Stage 4 Targets: hexagon ring (two sides per group, coloured push/pull/legs), Push/Pull/Legs rows that expand to per-muscle sets, 9-week history row (tap a week to view it), "Edit targets" sheet.
 - **In progress / known bugs:** nothing in progress. No known bugs. Unverified on a real phone (the user hasn't tested yet): rest-timer vibration and beep, keep-screen-on (Wake Lock), Add to Home screen, and the Stage 3 chart's touch tooltip.
-- **Next step:** ask the user to push Stage 4 if not already done, then plan Stage 5 (Recovery: front/back body-map SVG, recovery model, tap a muscle, manual override; SPEC §3.4 Recovery and §5) with the user. After that: 6 Strength score · 7 My Plan · 8 Polish (milestones screen, streak polish, Fitbod CSV import, PWA install polish).
+- **Next step:** plan Stage 5 (Recovery: front/back body-map SVG, recovery model, tap a muscle, manual override; SPEC §3.4 Recovery and §5) with the user. After that: 6 Strength score · 7 My Plan · 8 Polish (milestones screen, streak polish, Fitbod CSV import, PWA install polish).
 - **Decisions made (and why):** see "Behaviour decisions already made" below. Add new ones there, each with a short reason.
 
 ## Run, test, deploy
