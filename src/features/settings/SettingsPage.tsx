@@ -36,6 +36,16 @@ export function SettingsPage() {
               onBlur={(e) => { const n = parseFloat(e.target.value); if (n > 0) updateSettings({ bodyweightKg: fromDisplay(n, s.units) }); else e.target.value = String(toDisplay(s.bodyweightKg, s.units)); }}
               className="tabular w-24 rounded-lg bg-surface-2 px-3 py-2 text-right outline-none focus:ring-2 focus:ring-accent" />
           </Row>
+          <Row label="Height (cm)">
+            <ProfileNumber value={s.heightCm} min={100} max={250} onSave={(v) => updateSettings({ heightCm: v })} label="Height in centimetres" />
+          </Row>
+          <Row label="Age">
+            <ProfileNumber value={s.age} min={10} max={100} onSave={(v) => updateSettings({ age: v })} label="Age in years" />
+          </Row>
+          <Row label="Sex">
+            <Segmented value={s.sex ?? ''} options={[['male', 'Male'], ['female', 'Female'], ['other', 'Other']]}
+              onChange={(v) => updateSettings({ sex: v as 'male' | 'female' | 'other' })} />
+          </Row>
         </Section>
 
         <Section title="Preferences">
@@ -111,5 +121,19 @@ export function SettingsPage() {
         onCancel={() => setConfirmReset(false)}
         onConfirm={async () => { setConfirmReset(false); await resetAll(); setMsg({ text: 'All data reset.' }); }} />
     </div>
+  );
+}
+
+/** Whole-number profile field that saves on blur; empty clears it. */
+function ProfileNumber({ value, min, max, onSave, label }: { value?: number; min: number; max: number; onSave: (v: number | undefined) => void; label: string }) {
+  return (
+    <input type="number" inputMode="numeric" aria-label={label} key={value ?? 'none'} defaultValue={value ?? ''} placeholder="–"
+      onBlur={(e) => {
+        const raw = e.target.value.trim();
+        if (!raw) { onSave(undefined); return; }
+        const n = Math.round(parseFloat(raw));
+        if (n >= min && n <= max) onSave(n); else e.target.value = value === undefined ? '' : String(value);
+      }}
+      className="tabular min-h-11 w-24 rounded-lg bg-surface-2 px-3 text-right outline-none focus:ring-2 focus:ring-accent" />
   );
 }

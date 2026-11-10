@@ -70,7 +70,7 @@ export function MilestonesPage() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-muted">{label}</p>
                   <p className="tabular truncate text-2xl font-bold">{fmtTrack(id, value, s.units)}</p>
-                  <p className="text-sm text-muted">{next ? <><span className="font-semibold text-ink">{fmtTrack(id, next - value, s.units)} to go</span> · level {level + 1} at {fmtTrack(id, next, s.units)}</> : 'Top level reached'}</p>
+                  <p className="tabular text-sm text-muted">{next ? <>{fmtTrack(id, value, s.units)} / {fmtTrack(id, next, s.units)} · <span className="font-semibold text-ink">{fmtTrack(id, next - value, s.units)} to go</span></> : 'Top level reached'}</p>
                 </div>
               </div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-2">

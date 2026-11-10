@@ -70,15 +70,16 @@ export function ExerciseHistoryPage() {
         </div>
 
         <div className="mt-5">
-          <p className="text-sm text-muted">Estimated 1RM, latest</p>
+          <p className="text-sm text-muted">Estimated 1RM</p>
           {sum ? (
-            <p className="tabular mt-0.5 text-4xl leading-tight font-bold">
-              {toDisplay(chart[chart.length - 1].e1rm, u)}<span className="text-xl font-semibold text-muted"> {u}</span>
+            <p className="tabular mt-0.5 text-3xl leading-tight font-bold">
+              {sum.min === sum.max ? toDisplay(sum.max, u) : `${toDisplay(sum.min, u)}–${toDisplay(sum.max, u)}`}
+              <span className="text-lg font-semibold text-muted"> {u} in 1 rep</span>
             </p>
-          ) : <p className="mt-0.5 text-4xl leading-tight font-bold text-muted">–</p>}
+          ) : <p className="mt-0.5 text-3xl leading-tight font-bold text-muted">–</p>}
           <p className="tabular text-sm text-muted">
-            {sum && sum.min !== sum.max && <>Range {toDisplay(sum.min, u)}–{toDisplay(sum.max, u)} {u} · </>}
             {fmtDay(from, new Date(from).getFullYear() !== new Date(now).getFullYear())} – {fmtDay(now, true)}{isMonthly(range) && ' · best per month'}
+            {sum && <> · latest <span className="font-semibold text-ink">{fmtWeight(chart[chart.length - 1].e1rm, u)}</span></>}
           </p>
         </div>
 

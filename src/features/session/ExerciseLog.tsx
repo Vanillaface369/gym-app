@@ -66,6 +66,7 @@ export function ExerciseLogPage() {
           <Chip onClick={() => setRestOpen(true)}><IconTimer size={16} />{fmtClock(item.restSec)}</Chip>
           <Chip onClick={() => nav(`/exercise/${item.exerciseId}`)}><IconHistory size={16} />History</Chip>
           <Chip onClick={() => setReplaceOpen(true)}><IconSwap size={16} />Replace</Chip>
+          <button aria-label="More" onClick={() => setMoreOpen(true)} className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-surface-2 active:opacity-70"><IconMore size={18} /></button>
         </div>
 
         <div className="mt-5 grid grid-cols-[2.75rem_1fr_1fr_3rem] items-center gap-x-3 gap-y-2.5">

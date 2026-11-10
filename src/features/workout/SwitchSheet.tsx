@@ -1,14 +1,14 @@
 import { useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
-import { createTemplate, generateWorkout, importWorkoutJson, updateSettings, pickGenerated } from '../../db/actions';
-import { MUSCLES, type Muscle, type SplitDay, type WorkoutTemplate } from '../../db/types';
+import { createTemplate, customSplitTemplates, generateWorkout, importWorkoutJson, updateSettings, pickGenerated } from '../../db/actions';
+import { MUSCLES, type Category, type Exercise, type Muscle, type SplitDay, type WorkoutTemplate } from '../../db/types';
 import { useExercises, useSettings } from '../../lib/hooks';
 import { MUSCLE_LABEL } from '../../lib/format';
 import { DAY_LABEL, dayMuscles, splitDays } from '../../lib/generate';
 import { GROUP_MUSCLES } from '../../lib/targets';
 import { ToggleChip } from '../../components/form';
-import { Confirm, ExerciseThumb, Sheet, SheetRow, CATEGORY_COLOUR } from '../../components/ui';
+import { Confirm, ExerciseThumb, Sheet, SheetRow } from '../../components/ui';
 import { IconEdit, IconList, IconPlus, IconRotate, IconTarget, IconTrash, IconUpload } from '../../components/icons';
 
 type View = 'main' | 'saved' | 'create' | 'import' | 'muscles';
@@ -27,7 +27,21 @@ export function SwitchSheet({ open, onClose, currentId, current }: { open: boole
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Each day in the split: its saved template, or a workout generated when picked.
-  const days = splitDays(settings.split).map((day) => ({ day, template: templates.find((t) => t.splitDay === day) }));
+  const own = settings.split === 'custom' ? customSplitTemplates(templates) : [];
+  const days: { day: SplitDay; template?: WorkoutTemplate }[] = own.length
+    ? own.map((t) => ({ day: 'custom' as SplitDay, template: t }))
+    : splitDays(settings.split).map((day) => ({ day, template: templates.find((t) => t.splitDay === day) }));
+  // Silhouette for a split day: every main muscle it trains, lit in its group colour.
+  const dayThumb = (day: SplitDay, t?: WorkoutTemplate): Exercise => {
+    const exs = (t?.items ?? []).map((i) => map.get(i.exerciseId)).filter((e): e is Exercise => !!e);
+    const muscles = exs.length ? [...new Set(exs.flatMap((e) => e.primaryMuscles))] : dayMuscles(day);
+    const counts = new Map<Category, number>();
+    for (const e of exs) counts.set(e.category, (counts.get(e.category) ?? 0) + 1);
+    const cat: Category = day === 'push' || day === 'pull' || day === 'legs' ? day
+      : [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'core';
+    return { id: `day-${t?.id ?? day}`, name: t?.name ?? DAY_LABEL[day] ?? 'Workout', category: cat, primaryMuscles: muscles, secondaryMuscles: [],
+      equipment: [], isBodyweight: false, defaultRestSec: 0, preference: 0, isCustom: false, archived: false, useCount: 0 };
+  };
   const generate = async (opts: { muscles: Muscle[]; name: string; splitDay: SplitDay }) => {
     setBusy(true);
     try { await pickGenerated(await generateWorkout(opts)); close(); } finally { setBusy(false); }
@@ -61,14 +75,11 @@ export function SwitchSheet({ open, onClose, currentId, current }: { open: boole
           <div className="space-y-2">
             {days.map(({ day, template: t }) => {
               const on = t ? t.id === currentId : current?.id === 'generated' && current.splitDay === day;
-              const colour = CATEGORY_COLOUR[(day === 'push' || day === 'pull' || day === 'legs' ? day : 'core') as 'push'];
               return (
-                <button key={day} disabled={busy}
+                <button key={t?.id ?? day} disabled={busy}
                   onClick={() => (t ? pick(t.id) : generate({ muscles: dayMuscles(day), name: DAY_LABEL[day] ?? 'Workout', splitDay: day }))}
                   className={`flex w-full items-center gap-3 rounded-xl p-3 text-left ${on ? 'bg-accent/10 ring-1 ring-accent' : 'bg-surface-2'}`}>
-                  {t?.items[0] && map.get(t.items[0].exerciseId)
-                    ? <ExerciseThumb ex={map.get([...t.items].sort((a, b) => a.order - b.order)[0].exerciseId)} size={40} />
-                    : <span className="h-10 w-10 shrink-0 rounded-xl" style={{ background: `color-mix(in srgb, ${colour} 25%, transparent)` }} />}
+                  <ExerciseThumb ex={dayThumb(day, t)} size={44} />
                   <span className="flex-1">
                     <span className="block font-semibold">{t?.name ?? DAY_LABEL[day]}</span>
                     <span className="block text-sm text-muted">{t ? `${t.items.length} exercises` : 'Generated for you'}</span>

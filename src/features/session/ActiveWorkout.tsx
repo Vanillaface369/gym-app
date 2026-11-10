@@ -7,7 +7,7 @@ import { fmtClock, fmtWeight } from '../../lib/format';
 import { Confirm, ExerciseThumb, PageHeader, Sheet, SheetRow } from '../../components/ui';
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { IconDown, IconMore, IconPlus, IconSwap, IconTrash, IconUp, IconX } from '../../components/icons';
-import { RestTimerUI } from './RestTimer';
+import { RestTimerUI, restRemainingMs } from './RestTimer';
 import { SwipeToDelete, useUndo } from '../../components/Swipe';
 
 export function ActiveWorkoutPage() {
@@ -41,6 +41,7 @@ export function ActiveWorkoutPage() {
 
   const totalSets = active.items.reduce((t, it) => t + it.sets.length, 0);
   const doneSets = active.items.reduce((t, it) => t + it.sets.filter((s) => s.done).length, 0);
+  const restLeft = restRemainingMs(active.rest, now);
   // What to do next: the first exercise with sets left to log.
   const nextItem = active.items.find((it) => it.sets.some((s) => !s.done));
   const removeItem = (it: ActiveItem) => {
@@ -80,6 +81,7 @@ export function ActiveWorkoutPage() {
             const done = it.sets.filter((s) => s.done).length;
             const complete = done === it.sets.length && it.sets.length > 0;
             const top = Math.max(...it.sets.map((s) => s.weightKg));
+            const resting = active.rest?.itemKey === it.key && restLeft !== null && restLeft > 0;
             return (
               <SwipeToDelete as="li" key={it.key} onDelete={() => removeItem(it)}>
               <div className="flex items-center gap-1">
@@ -90,6 +92,7 @@ export function ActiveWorkoutPage() {
                     <p className="text-sm text-muted">
                       <span className={done ? 'text-accent' : ''}>{done}/{it.sets.length} sets logged</span>
                       {' • '}{it.maxEffort ? 'Max Effort • ' : ''}{fmtWeight(top, settings.units)}
+                      {resting && <span className="tabular ml-2 rounded-md bg-surface-2 px-1.5 py-0.5 text-xs font-semibold text-ink">Rest {fmtClock(Math.ceil(restLeft! / 1000))}</span>}
                     </p>
                   </div>
                 </Link>

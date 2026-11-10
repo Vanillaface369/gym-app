@@ -46,8 +46,8 @@ export function PlanPage() {
           <Row label="Workout length" hint="About 7½ minutes per exercise">
             <Stepper value={s.durationMin} label={fmtDuration(s.durationMin * 60)} min={15} max={120} step={15} onChange={(v) => updateSettings({ durationMin: v })} />
           </Row>
-          <Row label="Split">
-            <Segmented value={s.split === 'custom' ? 'ppl' : s.split} options={[['ppl', 'PPL'], ['upper_lower', 'Up/Low'], ['full', 'Full']]}
+          <Row label="Split" hint={s.split === 'custom' ? 'Rotates through workouts you create in Switch' : undefined}>
+            <Segmented value={s.split} options={[['ppl', 'PPL'], ['upper_lower', 'Up/Low'], ['full', 'Full'], ['custom', 'Own']]}
               onChange={(v) => updateSettings({ split: v, selectedTemplateId: undefined })} />
           </Row>
           <Row label="Exercise rotation" hint="How much generated workouts change">

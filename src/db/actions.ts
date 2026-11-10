@@ -151,6 +151,14 @@ export async function suggestedTemplate(): Promise<WorkoutTemplate | null> {
   const [templates, sessions, recovery] = await Promise.all([
     db.templates.toArray(), db.sessions.orderBy('startedAt').reverse().toArray(), currentRecovery(),
   ]);
+  // Custom split: rotate through the workouts you made yourself (Create / Import), least recently done first.
+  if (settings.split === 'custom') {
+    const own = customSplitTemplates(templates);
+    if (own.length) {
+      const last = (t: WorkoutTemplate) => sessions.find((x) => x.templateId === t.id)?.startedAt ?? 0;
+      return own.reduce((a, b) => (last(b) < last(a) ? b : a));
+    }
+  }
   const days = splitDays(settings.split);
   const templateFor = (d: SplitDay) => templates.find((t) => t.splitDay === d);
   const due = chooseDay(days.map((day) => {
@@ -164,6 +172,11 @@ export async function suggestedTemplate(): Promise<WorkoutTemplate | null> {
   }));
   if (!due) return templates[0] ?? null;
   return templateFor(due) ?? generateWorkout({ muscles: dayMuscles(due), name: DAY_LABEL[due] ?? 'Workout', splitDay: due });
+}
+
+/** The user's own workouts (created from scratch or imported), in creation order: the days of a custom split. */
+export function customSplitTemplates(templates: WorkoutTemplate[]): WorkoutTemplate[] {
+  return templates.filter((t) => t.splitDay === 'custom' && t.items.length > 0);
 }
 
 export async function startWorkout(template: WorkoutTemplate): Promise<void> {
