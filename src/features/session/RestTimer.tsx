@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { activeActions } from '../../db/actions';
 import type { ActiveWorkout } from '../../db/types';
-import { beep, useNow, useSettings, vibrate } from '../../lib/hooks';
-import { fmtClock } from '../../lib/format';
+import { beep, useExercises, useNow, useSettings, vibrate } from '../../lib/hooks';
+import { fmtClock, fmtWeight } from '../../lib/format';
 import { Sheet } from '../../components/ui';
 import { IconPause, IconPlay, IconTimer } from '../../components/icons';
 
@@ -41,6 +41,8 @@ export function RestAlarm({ active }: { active: ActiveWorkout | null | undefined
 export function RestTimerUI({ active, label }: { active: ActiveWorkout; label?: string }) {
   const rest = active.rest;
   const now = useNow(200, !!rest);
+  const settings = useSettings();
+  const { map } = useExercises();
   const [open, setOpen] = useState(false);
   const seen = useRef<number | null>(rest?.startedAt ?? null);
 
@@ -58,6 +60,19 @@ export function RestTimerUI({ active, label }: { active: ActiveWorkout; label?: 
   if (over && left < -15_000 && !open) return null;
 
   const pct = Math.min(1, Math.max(0, 1 - left / rest.durationMs));
+
+  // What comes after this rest: the next set of this exercise, or the next exercise.
+  const item = active.items.find((i) => i.key === rest.itemKey);
+  const nextIdx = item ? item.sets.findIndex((s) => !s.done) : -1;
+  let upNext: string | null = null;
+  if (item && nextIdx >= 0) {
+    const s = item.sets[nextIdx];
+    const n = s.isWarmup ? 'Warm-up' : `Set ${item.sets.slice(0, nextIdx + 1).filter((x) => !x.isWarmup).length}`;
+    upNext = `${n} · ${s.reps} × ${s.weightKg ? fmtWeight(s.weightKg, settings.units) : 'bodyweight'}`;
+  } else {
+    const after = active.items.find((i) => i.sets.some((s) => !s.done));
+    if (after) upNext = map.get(after.exerciseId)?.name ?? null;
+  }
   const R = 108;
   const C = 2 * Math.PI * R;
 
@@ -67,7 +82,7 @@ export function RestTimerUI({ active, label }: { active: ActiveWorkout; label?: 
         <button onClick={() => setOpen(true)}
           className="fixed inset-x-0 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] z-40 mx-auto flex w-[calc(100%-2rem)] max-w-[30rem] items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3 shadow-xl shadow-black/50">
           <IconTimer size={20} className={over ? 'text-accent' : 'text-muted'} />
-          <span className="flex-1 text-left text-sm">{over ? 'Rest over — next set!' : paused ? 'Rest paused' : 'Resting'}{label ? ` · ${label}` : ''}</span>
+          <span className="min-w-0 flex-1 truncate text-left text-sm">{over ? 'Rest over, next set' : paused ? 'Rest paused' : 'Resting'}{label ? ` · ${label}` : ''}</span>
           <span className={`tabular text-lg font-bold ${over ? 'text-accent' : ''}`}>{fmtClock(Math.ceil(Math.max(0, left) / 1000))}</span>
         </button>
       )}
@@ -84,6 +99,7 @@ export function RestTimerUI({ active, label }: { active: ActiveWorkout; label?: 
               <span className="mt-1 text-sm text-muted">{over ? 'Time to lift' : paused ? 'Paused' : `of ${fmtClock(rest.durationMs / 1000)}`}</span>
             </div>
           </div>
+          {upNext && <p className="tabular mb-1 text-center text-base"><span className="text-muted">Next: </span><span className="font-semibold">{upNext}</span></p>}
           <div className="mt-2 grid w-full grid-cols-3 gap-3">
             <button className="rounded-xl bg-surface-2 py-4 text-lg font-semibold" onClick={() => activeActions.restAdjust(-10)}>−10 s</button>
             <button aria-label={paused ? 'Resume' : 'Pause'} className="flex items-center justify-center rounded-xl bg-surface-2 py-4" onClick={() => activeActions.restPauseToggle()} disabled={over}>
@@ -91,7 +107,7 @@ export function RestTimerUI({ active, label }: { active: ActiveWorkout; label?: 
             </button>
             <button className="rounded-xl bg-surface-2 py-4 text-lg font-semibold" onClick={() => activeActions.restAdjust(10)}>+10 s</button>
           </div>
-          <button className="mt-3 w-full rounded-xl bg-accent py-4 text-lg font-bold text-accent-ink" onClick={() => { activeActions.restStop(); setOpen(false); }}>Done</button>
+          <button className="mt-3 min-h-14 w-full rounded-xl bg-accent text-lg font-bold text-accent-ink" onClick={() => { activeActions.restStop(); setOpen(false); }}>{over ? 'Next set' : 'Skip rest'}</button>
         </div>
       </Sheet>
     </>

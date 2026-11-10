@@ -1,27 +1,44 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { Category, Exercise } from '../db/types';
-import { IconX } from './icons';
+import { IconChevronLeft, IconX } from './icons';
 import { muscleIconView } from '../features/body/muscleIcon';
 
-export function Sheet({ open, onClose, title, children, tall }: {
-  open: boolean; onClose: () => void; title?: ReactNode; children: ReactNode; tall?: boolean;
-}) {
+/** Moves focus into an open dialog and puts it back where it was on close. */
+function useDialogFocus(open: boolean) {
+  const panel = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
-    const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const before = document.activeElement as HTMLElement | null;
+    panel.current?.focus({ preventScroll: true });
+    return () => { before?.focus?.({ preventScroll: true }); };
+  }, [open]);
+  return panel;
+}
+
+export function Sheet({ open, onClose, title, children, tall, onBack }: {
+  open: boolean; onClose: () => void; title?: ReactNode; children: ReactNode; tall?: boolean;
+  /** Shows a back arrow before the title (for sub-views inside one sheet). */
+  onBack?: () => void;
+}) {
+  const titleId = useId();
+  const panel = useDialogFocus(open);
+  useEffect(() => {
+    if (!open) return;
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && (onBack ?? onClose)();
     window.addEventListener('keydown', k);
     return () => window.removeEventListener('keydown', k);
-  }, [open, onClose]);
+  }, [open, onClose, onBack]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-labelledby={title !== undefined ? titleId : undefined}>
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className={`sheet-in relative w-full max-w-lg rounded-t-3xl bg-surface pb-safe ${tall ? 'h-[88vh]' : 'max-h-[88vh]'} flex flex-col`}>
+      <div ref={panel} tabIndex={-1} className={`sheet-in relative w-full max-w-lg rounded-t-3xl bg-surface pb-safe outline-none ${tall ? 'h-[88vh]' : 'max-h-[88vh]'} flex flex-col`}>
         <div className="mx-auto mt-2.5 h-1 w-10 rounded-full bg-line" />
         {title !== undefined && (
-          <div className="flex items-center justify-between px-5 pt-3 pb-2">
-            <h2 className="text-lg font-semibold">{title}</h2>
-            <button aria-label="Close" onClick={onClose} className="-mr-2 rounded-full p-2 text-muted active:bg-surface-2"><IconX /></button>
+          <div className="flex items-center gap-1 px-5 pt-2 pb-1">
+            {onBack && <IconButton label="Back" onClick={onBack} className="-ml-3"><IconChevronLeft /></IconButton>}
+            <h2 id={titleId} className="min-w-0 flex-1 truncate text-lg font-semibold">{title}</h2>
+            <IconButton label="Close" onClick={onClose} className="-mr-3"><IconX /></IconButton>
           </div>
         )}
         <div className="flex-1 overflow-y-auto px-5 pb-5">{children}</div>
@@ -34,17 +51,26 @@ export function Confirm({ open, title, body, confirmLabel = 'Confirm', danger, o
   open: boolean; title: string; body?: ReactNode; confirmLabel?: string; danger?: boolean;
   onConfirm: () => void; onCancel: () => void;
 }) {
+  const titleId = useId();
+  const bodyId = useId();
+  const panel = useDialogFocus(open);
+  useEffect(() => {
+    if (!open) return;
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && onCancel();
+    window.addEventListener('keydown', k);
+    return () => window.removeEventListener('keydown', k);
+  }, [open, onCancel]);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-6" role="alertdialog" aria-modal="true">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-6" role="alertdialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={body ? bodyId : undefined}>
       <div className="absolute inset-0 bg-black/70" onClick={onCancel} />
-      <div className="relative w-full max-w-sm rounded-2xl bg-surface p-5">
-        <h2 className="text-lg font-semibold">{title}</h2>
-        {body && <div className="mt-2 text-sm text-muted">{body}</div>}
+      <div ref={panel} tabIndex={-1} className="relative w-full max-w-sm rounded-2xl bg-surface p-5 outline-none">
+        <h2 id={titleId} className="text-lg font-semibold">{title}</h2>
+        {body && <div id={bodyId} className="mt-2 text-sm text-muted">{body}</div>}
         <div className="mt-5 flex gap-3">
-          <button className="flex-1 rounded-xl bg-surface-2 py-3 font-medium" onClick={onCancel}>Cancel</button>
+          <button className="min-h-12 flex-1 rounded-xl bg-surface-2 font-medium" onClick={onCancel}>Cancel</button>
           <button
-            className={`flex-1 rounded-xl py-3 font-semibold ${danger ? 'bg-danger text-white' : 'bg-accent text-accent-ink'}`}
+            className={`min-h-12 flex-1 rounded-xl font-semibold ${danger ? 'bg-danger text-white' : 'bg-accent text-accent-ink'}`}
             onClick={onConfirm}
           >{confirmLabel}</button>
         </div>
@@ -53,9 +79,22 @@ export function Confirm({ open, title, body, confirmLabel = 'Confirm', danger, o
   );
 }
 
+/** Round icon-only button with a 44px hit area. */
+export function IconButton({ label, onClick, children, className = '', tone = 'muted', disabled }: {
+  label: string; onClick?: () => void; children: ReactNode; className?: string; tone?: 'muted' | 'ink' | 'danger'; disabled?: boolean;
+}) {
+  const colour = tone === 'ink' ? 'text-ink' : tone === 'danger' ? 'text-danger' : 'text-muted';
+  return (
+    <button type="button" aria-label={label} disabled={disabled} onClick={onClick}
+      className={`tap rounded-full ${colour} active:bg-surface-2 disabled:opacity-30 ${className}`}>{children}</button>
+  );
+}
+
+/** Tappable chips are filled and 44px tall; static info chips (no onClick) are outlined so they don't read as buttons. */
 export function Chip({ children, onClick, active, className = '' }: { children: ReactNode; onClick?: () => void; active?: boolean; className?: string }) {
-  const cls = `inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-medium ${active ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-ink'} ${onClick ? 'active:opacity-70' : ''} ${className}`;
-  return onClick ? <button className={cls} onClick={onClick}>{children}</button> : <span className={cls}>{children}</span>;
+  const base = 'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium';
+  if (!onClick) return <span className={`${base} py-1.5 text-muted ring-1 ring-line ring-inset ${className}`}>{children}</span>;
+  return <button className={`${base} min-h-11 ${active ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-ink'} active:opacity-70 ${className}`} onClick={onClick}>{children}</button>;
 }
 
 export function PrimaryButton({ children, onClick, className = '', disabled }: { children: ReactNode; onClick?: () => void; className?: string; disabled?: boolean }) {

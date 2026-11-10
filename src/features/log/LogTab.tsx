@@ -9,7 +9,7 @@ import {
   addDays, dayKey, lifetimeTotals, longestStreak, MILESTONE_TIERS, milestoneLevel, monthGrid, startOfDay, startOfWeek, trainingDays, weekStreak, weekdayLabels,
 } from '../../lib/stats';
 import { CATEGORY_COLOUR, Sheet } from '../../components/ui';
-import { IconChevronLeft, IconChevronRight, IconDown, IconFlame, IconPlus, IconUp, IconWeight, IconX } from '../../components/icons';
+import { IconChevronLeft, IconChevronRight, IconDown, IconFlame, IconPlus, IconTrophy, IconUp, IconWeight, IconX } from '../../components/icons';
 import { ManualLogSheet } from './ManualLogSheet';
 
 const COLLAPSE_KEY = 'log.calendarCollapsed';
@@ -64,7 +64,7 @@ export function LogTab() {
     <div className="pt-safe px-4">
       <header className="flex h-14 items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Log</h1>
-        <button aria-label="Log a past workout" onClick={() => setManualOpen(true)} className="-mr-2 rounded-full p-2 text-accent active:bg-surface-2"><IconPlus size={26} /></button>
+        <button aria-label="Log a past workout" onClick={() => setManualOpen(true)} className="tap -mr-3 rounded-full p-2 text-accent active:bg-surface-2"><IconPlus size={26} /></button>
       </header>
 
       <div className="grid grid-cols-4 gap-2">
@@ -76,7 +76,7 @@ export function LogTab() {
 
       <Sheet open={streakOpen} onClose={() => setStreakOpen(false)} title="Weekly streak">
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-2xl bg-surface-2 p-3"><p className="text-xs text-muted">Current</p><p className="tabular text-3xl font-bold text-accent">{streak}</p><p className="text-xs text-muted">{streak === 1 ? 'week' : 'weeks'}</p></div>
+          <div className="rounded-2xl bg-surface-2 p-3"><p className="text-xs text-muted">Current</p><p className={`tabular text-3xl font-bold ${streak > 0 ? 'text-accent' : ''}`}>{streak}</p><p className="text-xs text-muted">{streak === 1 ? 'week' : 'weeks'}</p></div>
           <div className="rounded-2xl bg-surface-2 p-3"><p className="text-xs text-muted">Longest</p><p className="tabular text-3xl font-bold">{best}</p><p className="text-xs text-muted">{best === 1 ? 'week' : 'weeks'}</p></div>
         </div>
         <p className="mt-4 text-sm font-semibold">This week: {weekDays} of {s.workoutsPerWeek} days</p>
@@ -85,7 +85,7 @@ export function LogTab() {
         </div>
         <p className="mt-2 text-sm text-muted">
           {weekDays >= s.workoutsPerWeek ? 'Goal met. This week counts toward your streak.'
-            : `${s.workoutsPerWeek - weekDays} more training day${s.workoutsPerWeek - weekDays > 1 ? 's' : ''} to keep the streak going.`}
+            : `${s.workoutsPerWeek - weekDays} more training day${s.workoutsPerWeek - weekDays > 1 ? 's' : ''} ${streak > 0 ? 'to keep the streak going' : 'to start a streak'}.`}
         </p>
         <h3 className="mt-5 text-sm font-semibold">Last 8 weeks</h3>
         <ol className="mt-2 grid grid-cols-8 gap-1.5">
@@ -96,12 +96,12 @@ export function LogTab() {
             return (
               <li key={w} className="text-center" aria-label={`Week of ${new Date(w).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}: ${days} days`}>
                 <span className={`tabular flex h-9 items-center justify-center rounded-lg text-sm font-semibold ${met ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-muted'}`}>{days}</span>
-                <span className="mt-0.5 block text-[10px] text-muted">{new Date(w).getDate()}/{new Date(w).getMonth() + 1}</span>
+                <span className="mt-0.5 block text-xs text-muted">{new Date(w).getDate()}/{new Date(w).getMonth() + 1}</span>
               </li>
             );
           })}
         </ol>
-        <p className="mt-3 text-xs text-muted">A week counts when you train on {s.workoutsPerWeek} different days. Change the goal in My Plan.</p>
+        <p className="mt-3 text-sm text-muted">A week counts when you train on {s.workoutsPerWeek} different days. <Link to="/plan" className="font-semibold text-ink underline decoration-line underline-offset-4">Change the goal in My Plan</Link></p>
       </Sheet>
 
       <section className="mt-5 rounded-2xl bg-surface p-3">
@@ -110,12 +110,12 @@ export function LogTab() {
             <p className="font-semibold">This week</p>
           ) : (
             <div className="flex items-center gap-1">
-              <button aria-label="Previous month" onClick={() => shift(-1)} className="rounded-full p-1.5 text-muted active:bg-surface-2"><IconChevronLeft size={18} /></button>
+              <button aria-label="Previous month" onClick={() => shift(-1)} className="tap rounded-full p-1.5 text-muted active:bg-surface-2"><IconChevronLeft size={18} /></button>
               <p className="w-36 text-center font-semibold">{monthLabel}</p>
-              <button aria-label="Next month" onClick={() => shift(1)} className="rounded-full p-1.5 text-muted active:bg-surface-2"><IconChevronRight size={18} /></button>
+              <button aria-label="Next month" onClick={() => shift(1)} className="tap rounded-full p-1.5 text-muted active:bg-surface-2"><IconChevronRight size={18} /></button>
             </div>
           )}
-          <button onClick={toggleCollapsed} className="flex items-center gap-1 rounded-full px-2 py-1 text-sm text-muted active:bg-surface-2">
+          <button onClick={toggleCollapsed} className="-mr-1 flex min-h-11 items-center gap-1 rounded-full px-3 text-sm text-muted active:bg-surface-2">
             {collapsed ? <>Month <IconDown size={16} /></> : <>Week <IconUp size={16} /></>}
           </button>
         </div>
@@ -136,7 +136,7 @@ export function LogTab() {
                   <span className={`tabular flex h-8 w-8 items-center justify-center rounded-full text-sm
                     ${mins ? (selected ? 'bg-ink font-bold text-bg' : 'bg-accent font-bold text-accent-ink') : isToday ? 'ring-1 ring-accent' : ''}
                     ${!inMonth ? 'opacity-30' : ''}`}>{new Date(day).getDate()}</span>
-                  {mins !== undefined && <span className={`tabular mt-0.5 text-[10px] ${inMonth ? 'text-accent' : 'text-muted opacity-50'}`}>{mins}m</span>}
+                  {mins !== undefined && <span className={`tabular mt-0.5 text-xs text-muted ${inMonth ? '' : 'opacity-50'}`}>{mins}m</span>}
                 </button>
               );
             })}
@@ -148,7 +148,7 @@ export function LogTab() {
         <h2 className="text-xs font-semibold tracking-wider text-muted uppercase">
           {selectedDay ? new Date(shown[0]?.startedAt ?? now).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' }) : 'Past workouts'}
         </h2>
-        {selectedDay && <button onClick={() => setSelectedDay(null)} className="flex items-center gap-1 text-sm text-accent"><IconX size={14} />Show all</button>}
+        {selectedDay && <button onClick={() => setSelectedDay(null)} className="-mr-2 flex min-h-11 items-center gap-1 rounded-full px-2 text-sm font-semibold text-ink active:bg-surface-2"><IconX size={14} />Show all</button>}
       </div>
 
       {sessions !== undefined && !list.length && (
@@ -166,10 +166,10 @@ export function LogTab() {
 function Stat({ label, value, sub, accent, onClick }: { label: string; value: string; sub?: string; accent?: boolean; onClick?: () => void }) {
   const Tag = onClick ? 'button' : 'div';
   return (
-    <Tag onClick={onClick} className="rounded-2xl bg-surface px-2 py-3 text-center active:bg-surface-2">
-      <p className={`tabular text-xl font-bold ${accent ? 'text-accent' : ''}`}>{value}</p>
-      <p className="text-[11px] leading-tight text-muted">{sub ? `${sub}` : ' '}</p>
-      <p className="mt-1 text-[11px] font-medium leading-tight">{label}</p>
+    <Tag onClick={onClick} className={`rounded-2xl bg-surface px-1.5 py-3 text-center ${onClick ? 'active:bg-surface-2' : ''}`}>
+      <p className={`tabular text-xl leading-tight font-bold ${accent ? 'text-accent' : ''}`}>{value}</p>
+      <p className="text-xs leading-tight text-muted">{sub ?? '\u00a0'}</p>
+      <p className="mt-1 flex items-center justify-center text-xs leading-tight font-medium">{label}{onClick && <IconChevronRight size={12} className="text-muted" />}</p>
     </Tag>
   );
 }
@@ -200,7 +200,7 @@ function TimelineCard({ w, map, units }: { w: WorkoutSession; map: Map<string, E
               <span>{w.exerciseOrder.length} exercises</span>
               <span className="flex items-center gap-1"><IconFlame size={14} />{w.caloriesEst}</span>
               <span className="flex items-center gap-1"><IconWeight size={14} />{fmtBigWeight(w.volumeKg, units)}</span>
-              {w.recordsCount > 0 && <span className="text-accent">🏆 {w.recordsCount}</span>}
+              {w.recordsCount > 0 && <span className="flex items-center gap-1 text-accent"><IconTrophy size={14} />{w.recordsCount}</span>}
             </p>
           </div>
         </div>

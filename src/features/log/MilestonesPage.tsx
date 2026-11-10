@@ -10,8 +10,9 @@ import { IconChevronLeft } from '../../components/icons';
 
 export const TRACKS: { id: Track; label: string; colour: string }[] = [
   { id: 'workouts', label: 'Workouts', colour: 'var(--color-accent)' },
-  { id: 'volumeKg', label: 'Volume', colour: 'var(--color-pull)' },
-  { id: 'calories', label: 'Calories', colour: 'var(--color-push)' },
+  // Not the push/pull category colours, so they don't read as muscle groups.
+  { id: 'volumeKg', label: 'Volume', colour: 'var(--color-silver)' },
+  { id: 'calories', label: 'Calories', colour: 'var(--color-gold)' },
 ];
 
 export function fmtTrack(track: Track, value: number, units: Units): string {
@@ -52,7 +53,7 @@ export function MilestonesPage() {
   return (
     <div className="pb-16">
       <PageHeader
-        left={<button aria-label="Back" onClick={() => nav(-1)} className="-ml-2 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
+        left={<button aria-label="Back" onClick={() => nav(-1)} className="tap -ml-3 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
         title="Milestones"
       />
       <div className="space-y-3 px-4">
@@ -69,7 +70,7 @@ export function MilestonesPage() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-muted">{label}</p>
                   <p className="tabular truncate text-2xl font-bold">{fmtTrack(id, value, s.units)}</p>
-                  <p className="text-xs text-muted">{next ? `Next level at ${fmtTrack(id, next, s.units)}` : 'Top level reached'}</p>
+                  <p className="text-sm text-muted">{next ? <><span className="font-semibold text-ink">{fmtTrack(id, next - value, s.units)} to go</span> · level {level + 1} at {fmtTrack(id, next, s.units)}</> : 'Top level reached'}</p>
                 </div>
               </div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-2">
@@ -77,7 +78,7 @@ export function MilestonesPage() {
               </div>
               <ol className="mt-3 flex flex-wrap gap-1.5" aria-label={`${label} levels`}>
                 {tiers.map((t, i) => (
-                  <li key={t} className={`tabular rounded-full px-2 py-0.5 text-[11px] font-semibold ${i < level ? 'text-accent-ink' : 'bg-surface-2 text-muted'}`}
+                  <li key={t} className={`tabular rounded-full px-2 py-0.5 text-xs font-semibold ${i < level ? 'text-accent-ink' : 'bg-surface-2 text-muted'}`}
                     style={i < level ? { background: colour } : undefined}>{shortTier(id, t, s.units)}</li>
                 ))}
               </ol>

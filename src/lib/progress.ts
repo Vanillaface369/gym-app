@@ -5,7 +5,7 @@ export type Range = 'week' | 'month' | '6m' | 'year';
 export const RANGES: { id: Range; label: string }[] = [
   { id: 'week', label: 'Week' },
   { id: 'month', label: 'Month' },
-  { id: '6m', label: '6 Month' },
+  { id: '6m', label: '6 Months' },
   { id: 'year', label: 'Year' },
 ];
 

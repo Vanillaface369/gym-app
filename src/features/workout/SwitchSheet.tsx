@@ -3,18 +3,19 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../../db/db';
 import { createTemplate, generateWorkout, importWorkoutJson, updateSettings, pickGenerated } from '../../db/actions';
 import { MUSCLES, type Muscle, type SplitDay, type WorkoutTemplate } from '../../db/types';
-import { useSettings } from '../../lib/hooks';
+import { useExercises, useSettings } from '../../lib/hooks';
 import { MUSCLE_LABEL } from '../../lib/format';
 import { DAY_LABEL, dayMuscles, splitDays } from '../../lib/generate';
 import { GROUP_MUSCLES } from '../../lib/targets';
 import { ToggleChip } from '../../components/form';
-import { Confirm, Sheet, SheetRow, CATEGORY_COLOUR } from '../../components/ui';
+import { Confirm, ExerciseThumb, Sheet, SheetRow, CATEGORY_COLOUR } from '../../components/ui';
 import { IconEdit, IconList, IconPlus, IconRotate, IconTarget, IconTrash, IconUpload } from '../../components/icons';
 
 type View = 'main' | 'saved' | 'create' | 'import' | 'muscles';
 
 export function SwitchSheet({ open, onClose, currentId, current }: { open: boolean; onClose: () => void; currentId?: string; current: WorkoutTemplate | null }) {
   const settings = useSettings();
+  const { map } = useExercises();
   const [muscles, setMuscles] = useState<Muscle[]>([]);
   const [busy, setBusy] = useState(false);
   const templates = useLiveQuery(() => db.templates.toArray(), []) ?? [];
@@ -53,7 +54,7 @@ export function SwitchSheet({ open, onClose, currentId, current }: { open: boole
   const titles: Record<View, string> = { main: 'Switch workout', saved: 'Saved workouts', create: 'New workout', import: 'Import workout', muscles: 'Pick muscle groups' };
 
   return (
-    <Sheet open={open} onClose={close} title={titles[view]}>
+    <Sheet open={open} onClose={close} title={titles[view]} onBack={view === 'main' ? undefined : () => { setView('main'); setError(''); }}>
       {view === 'main' && (
         <>
           <p className="mb-1 text-xs font-semibold tracking-wider text-muted uppercase">Within training split</p>
@@ -65,7 +66,9 @@ export function SwitchSheet({ open, onClose, currentId, current }: { open: boole
                 <button key={day} disabled={busy}
                   onClick={() => (t ? pick(t.id) : generate({ muscles: dayMuscles(day), name: DAY_LABEL[day] ?? 'Workout', splitDay: day }))}
                   className={`flex w-full items-center gap-3 rounded-xl p-3 text-left ${on ? 'bg-accent/10 ring-1 ring-accent' : 'bg-surface-2'}`}>
-                  <span className="h-9 w-9 rounded-lg" style={{ background: `color-mix(in srgb, ${colour} 25%, transparent)` }} />
+                  {t?.items[0] && map.get(t.items[0].exerciseId)
+                    ? <ExerciseThumb ex={map.get([...t.items].sort((a, b) => a.order - b.order)[0].exerciseId)} size={40} />
+                    : <span className="h-10 w-10 shrink-0 rounded-xl" style={{ background: `color-mix(in srgb, ${colour} 25%, transparent)` }} />}
                   <span className="flex-1">
                     <span className="block font-semibold">{t?.name ?? DAY_LABEL[day]}</span>
                     <span className="block text-sm text-muted">{t ? `${t.items.length} exercises` : 'Generated for you'}</span>

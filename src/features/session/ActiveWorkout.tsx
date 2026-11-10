@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { activeActions, discardWorkout, finishWorkout, itemForExercise } from '../../db/actions';
 import type { ActiveItem } from '../../db/types';
 import { useActive, useExercises, useNow, useSettings } from '../../lib/hooks';
@@ -23,7 +23,16 @@ export function ActiveWorkoutPage() {
   const [replaceFor, setReplaceFor] = useState<ActiveItem | null>(null);
   const [adding, setAdding] = useState(false);
   const [finishing, setFinishing] = useState(false);
-  const undo = useUndo();
+  // Keep the Undo bar above the rest-timer bar when one is showing.
+  const undo = useUndo(active?.rest ? 'bottom-44' : 'bottom-28');
+  // The logging screen can remove an exercise and send us its undo info.
+  const location = useLocation();
+  const removed = (location.state as { removed?: { item: ActiveItem; index: number; name: string } } | null)?.removed;
+  useEffect(() => {
+    if (!removed) return;
+    undo.show(`Removed ${removed.name}`, () => activeActions.insertItem(removed.item, removed.index));
+    nav('.', { replace: true, state: null });
+  }, [removed]);
   // Set while we're finishing/discarding, so the "no workout -> go home" redirect doesn't race our own navigation.
   const leaving = useRef(false);
 
@@ -33,6 +42,13 @@ export function ActiveWorkoutPage() {
   const totalSets = active.items.reduce((t, it) => t + it.sets.length, 0);
   const doneSets = active.items.reduce((t, it) => t + it.sets.filter((s) => s.done).length, 0);
   const restLeft = restRemainingMs(active.rest, now);
+  // What to do next: the first exercise with sets left to log.
+  const nextItem = active.items.find((it) => it.sets.some((s) => !s.done));
+  const removeItem = (it: ActiveItem) => {
+    const index = active.items.findIndex((x) => x.key === it.key);
+    activeActions.removeItem(it.key);
+    undo.show(`Removed ${map.get(it.exerciseId)?.name ?? 'exercise'}`, () => activeActions.insertItem(it, index));
+  };
 
   const finish = async () => {
     setFinishing(true);
@@ -46,9 +62,9 @@ export function ActiveWorkoutPage() {
   return (
     <div className="pb-44">
       <PageHeader
-        left={<button aria-label="Discard workout" onClick={() => setConfirmDiscard(true)} className="-ml-2 rounded-full p-2 text-muted active:bg-surface-2"><IconX /></button>}
+        left={<button aria-label="Discard workout" onClick={() => setConfirmDiscard(true)} className="tap -ml-3 rounded-full p-2 text-muted active:bg-surface-2"><IconX /></button>}
         title={active.name}
-        right={<Link to="/" className="text-sm text-muted">Hide</Link>}
+        right={<Link to="/" className="tap -mr-3 rounded-full px-3 text-sm font-medium text-muted active:bg-surface-2">Hide</Link>}
       />
       <div className="px-4">
         <div className="flex flex-col items-center py-4">
@@ -60,17 +76,14 @@ export function ActiveWorkoutPage() {
         </div>
 
         <ul className="divide-y divide-line">
-          {active.items.map((it, index) => {
+          {active.items.map((it) => {
             const ex = map.get(it.exerciseId);
             const done = it.sets.filter((s) => s.done).length;
             const complete = done === it.sets.length && it.sets.length > 0;
             const resting = active.rest?.itemKey === it.key && restLeft !== null && restLeft > 0;
             const top = Math.max(...it.sets.map((s) => s.weightKg));
             return (
-              <SwipeToDelete as="li" key={it.key} onDelete={() => {
-                activeActions.removeItem(it.key);
-                undo.show(`Removed ${ex?.name ?? 'exercise'}`, () => activeActions.insertItem(it, index));
-              }}>
+              <SwipeToDelete as="li" key={it.key} onDelete={() => removeItem(it)}>
               <div className="flex items-center gap-1">
                 <Link to={`/active/${it.key}`} className="flex min-w-0 flex-1 items-center gap-3 py-3 active:opacity-70">
                   <ExerciseThumb ex={ex} done={complete} />
@@ -83,7 +96,7 @@ export function ActiveWorkoutPage() {
                     </p>
                   </div>
                 </Link>
-                <button aria-label={`Options for ${ex?.name}`} onClick={() => setMenuFor(it)} className="-mr-2 rounded-full p-2 text-muted active:bg-surface-2"><IconMore /></button>
+                <button aria-label={`Options for ${ex?.name}`} onClick={() => setMenuFor(it)} className="tap -mr-3 rounded-full p-2 text-muted active:bg-surface-2"><IconMore /></button>
               </div>
               </SwipeToDelete>
             );
@@ -94,11 +107,23 @@ export function ActiveWorkoutPage() {
         </button>
       </div>
 
-      <div className="pb-safe fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg bg-gradient-to-t from-bg via-bg to-transparent px-4 pt-6 pb-4">
-        <button disabled={finishing} onClick={() => (doneSets < totalSets ? setConfirmFinish(true) : finish())}
-          className="w-full rounded-2xl bg-accent py-4 text-lg font-bold text-accent-ink shadow-xl shadow-black/50 active:scale-[0.98] disabled:opacity-50">
-          Finish Workout
-        </button>
+      {/* Mid-workout the main action is the next exercise; Finish takes over once everything is logged. */}
+      <div className="pb-bar fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-lg gap-3 bg-gradient-to-t from-bg via-bg to-transparent px-4 pt-6">
+        {nextItem ? (
+          <>
+            <button disabled={finishing} onClick={() => setConfirmFinish(true)}
+              className="min-h-14 rounded-2xl bg-surface-2 px-5 font-semibold active:opacity-70 disabled:opacity-50">Finish</button>
+            <Link to={`/active/${nextItem.key}`}
+              className="flex min-h-14 min-w-0 flex-1 items-center justify-center gap-1 rounded-2xl bg-accent px-4 text-lg font-bold text-accent-ink shadow-xl shadow-black/50 active:scale-[0.98]">
+              <span className="truncate">{doneSets ? 'Continue' : 'Start'}: {map.get(nextItem.exerciseId)?.name ?? 'next exercise'}</span>
+            </Link>
+          </>
+        ) : (
+          <button disabled={finishing} onClick={finish}
+            className="min-h-14 w-full rounded-2xl bg-accent text-lg font-bold text-accent-ink shadow-xl shadow-black/50 active:scale-[0.98] disabled:opacity-50">
+            Finish Workout
+          </button>
+        )}
       </div>
 
       {undo.bar}
@@ -108,9 +133,9 @@ export function ActiveWorkoutPage() {
         {menuFor && (
           <>
             <SheetRow icon={<IconSwap />} label="Replace" onClick={() => { setReplaceFor(menuFor); setMenuFor(null); }} />
-            <SheetRow icon={<IconUp />} label="Move up" onClick={() => { activeActions.moveItem(menuFor.key, -1); setMenuFor(null); }} />
-            <SheetRow icon={<IconDown />} label="Move down" onClick={() => { activeActions.moveItem(menuFor.key, 1); setMenuFor(null); }} />
-            <SheetRow icon={<IconTrash />} label="Remove from this workout" danger onClick={() => { activeActions.removeItem(menuFor.key); setMenuFor(null); }} />
+            <SheetRow icon={<IconUp />} label="Move up" disabled={active.items[0]?.key === menuFor.key} onClick={() => { activeActions.moveItem(menuFor.key, -1); setMenuFor(null); }} />
+            <SheetRow icon={<IconDown />} label="Move down" disabled={active.items.at(-1)?.key === menuFor.key} onClick={() => { activeActions.moveItem(menuFor.key, 1); setMenuFor(null); }} />
+            <SheetRow icon={<IconTrash />} label="Remove from this workout" danger onClick={() => { removeItem(menuFor); setMenuFor(null); }} />
           </>
         )}
       </Sheet>
@@ -119,7 +144,8 @@ export function ActiveWorkoutPage() {
       <ExercisePicker open={adding} title="Add exercise" onClose={() => setAdding(false)} excludeIds={active.items.map((i) => i.exerciseId)}
         onPick={async (ex) => { await activeActions.addItem(await itemForExercise(ex)); setAdding(false); }} />
 
-      <Confirm open={confirmDiscard} title="Discard this workout?" body="Nothing from this session will be saved." confirmLabel="Discard" danger
+      <Confirm open={confirmDiscard} title="Discard this workout?" confirmLabel="Discard" danger
+        body={doneSets ? `You've logged ${doneSets} set${doneSets === 1 ? '' : 's'}. ${doneSets === 1 ? 'It' : 'They'} won't be saved.` : 'Nothing from this session will be saved.'}
         onCancel={() => setConfirmDiscard(false)}
         onConfirm={async () => { leaving.current = true; await discardWorkout(); nav('/', { replace: true }); }} />
       <Confirm open={confirmFinish} title="Finish workout?" body={`${totalSets - doneSets} planned sets aren't logged. Only logged sets will be saved.`} confirmLabel="Finish"

@@ -25,7 +25,7 @@ export function PlanPage() {
   return (
     <div className="pb-24">
       <PageHeader
-        left={<button aria-label="Back" onClick={() => nav(-1)} className="-ml-2 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
+        left={<button aria-label="Back" onClick={() => nav(-1)} className="tap -ml-3 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
         title="My Plan"
       />
       <div className="space-y-6 px-4">
@@ -34,7 +34,7 @@ export function PlanPage() {
             <Segmented value={s.goal} options={GOALS} onChange={(v) => updateSettings({ goal: v })} />
           </Row>
           <Row label="Experience">
-            <Segmented value={s.experience} options={[['beginner', 'New'], ['intermediate', 'Mid'], ['advanced', 'Adv.']]}
+            <Segmented value={s.experience} options={[['beginner', 'New'], ['intermediate', 'Mid'], ['advanced', 'Pro']]}
               onChange={(v) => updateSettings({ experience: v })} />
           </Row>
         </Section>

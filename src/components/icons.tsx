@@ -36,6 +36,10 @@ export const IconWeight = mk(<><path d="M6.5 8h11l2.5 12H4z" /><circle cx="12" c
 export const IconLink = mk(<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" />);
 export const IconUpload = mk(<path d="M12 16V4M7 9l5-5 5 5M4 20h16" />);
 export const IconDownload = mk(<path d="M12 4v12M7 11l5 5 5-5M4 20h16" />);
+/** "Less often": the star with a slash through it. */
+export const IconStarOff = mk(<><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" opacity=".55" /><path d="M4 4l16 16" /></>);
+export const IconBolt = mk(<path d="M13 2.5L5 13.5h6l-1 8 8-11h-6z" />);
+export const IconPerson = mk(<><circle cx="12" cy="8" r="3.5" /><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" /></>);
 export const IconStar = mk(<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />);
 export const IconList = mk(<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" />);
 export const IconEdit = mk(<path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />);

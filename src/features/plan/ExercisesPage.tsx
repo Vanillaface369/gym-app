@@ -8,7 +8,7 @@ import { EQUIPMENT_LABEL, fmtClock, MUSCLE_LABEL, uid } from '../../lib/format';
 import { goalRange } from '../../lib/progression';
 import { ExerciseThumb, PageHeader, Sheet } from '../../components/ui';
 import { Segmented, Stepper, Toggle, ToggleChip } from '../../components/form';
-import { IconChevronLeft, IconDown, IconPlus, IconUp } from '../../components/icons';
+import { IconChevronLeft, IconPlus, IconStar, IconStarOff } from '../../components/icons';
 
 const CATEGORIES: [Category, string][] = [['push', 'Push'], ['pull', 'Pull'], ['legs', 'Legs'], ['core', 'Core'], ['other', 'Other']];
 
@@ -35,14 +35,16 @@ export function ExercisesPage() {
   return (
     <div className="pb-24">
       <PageHeader
-        left={<button aria-label="Back" onClick={() => nav(-1)} className="-ml-2 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
+        left={<button aria-label="Back" onClick={() => nav(-1)} className="tap -ml-3 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
         title="Manage exercises"
-        right={<button aria-label="Add exercise" onClick={() => setEditing(blank())} className="-mr-2 rounded-full p-2 text-accent active:bg-surface-2"><IconPlus /></button>}
+        right={<button aria-label="Add exercise" onClick={() => setEditing(blank())} className="tap -mr-3 rounded-full p-2 text-accent active:bg-surface-2"><IconPlus /></button>}
       />
       <div className="px-4">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${list.length} exercises`} aria-label="Search exercises"
           className="w-full rounded-xl bg-surface px-4 py-3 outline-none focus:ring-2 focus:ring-accent" />
-        <p className="mt-2 text-xs text-muted">↑ more often · ↓ less often in generated workouts. Tap an exercise to edit it.</p>
+        <p className="mt-2 text-sm text-muted">
+          Tap <IconStar size={14} className="inline align-[-2px] text-gold" /> to pick an exercise more often in generated workouts, or <IconStarOff size={14} className="inline align-[-2px]" /> less often. Tap a name to edit it.
+        </p>
         <ul className="mt-2 divide-y divide-line">
           {shown.map((ex) => (
             <li key={ex.id} className="flex items-center gap-3 py-2.5">
@@ -54,9 +56,9 @@ export function ExercisesPage() {
                 </span>
               </button>
               <button aria-label={`More often: ${ex.name}`} aria-pressed={ex.preference === 1} onClick={() => setPreference(ex.id, ex.preference === 1 ? 0 : 1)}
-                className={`rounded-full p-2 ${ex.preference === 1 ? 'bg-accent/15 text-accent' : 'text-muted'}`}><IconUp size={18} /></button>
+                className={`tap rounded-full p-2 ${ex.preference === 1 ? 'bg-gold/15 text-gold' : 'text-muted'}`}><IconStar size={18} /></button>
               <button aria-label={`Less often: ${ex.name}`} aria-pressed={ex.preference === -1} onClick={() => setPreference(ex.id, ex.preference === -1 ? 0 : -1)}
-                className={`rounded-full p-2 ${ex.preference === -1 ? 'bg-danger/15 text-danger' : 'text-muted'}`}><IconDown size={18} /></button>
+                className={`tap rounded-full p-2 ${ex.preference === -1 ? 'bg-surface-2 text-ink' : 'text-muted'}`}><IconStarOff size={18} /></button>
             </li>
           ))}
         </ul>
@@ -116,7 +118,7 @@ function ExerciseEditor({ ex, onClose, defaultRange }: { ex: Exercise | null; on
       </div>
       <p className="mt-4 text-sm text-muted">Helper muscles</p>
       <div className="mt-1.5 flex flex-wrap gap-1.5">
-        {MUSCLES.map((m) => <ToggleChip key={m} on={d.secondaryMuscles.includes(m)} onClick={() => toggleMuscle('secondaryMuscles', m)}>{MUSCLE_LABEL[m]}</ToggleChip>)}
+        {MUSCLES.map((m) => <ToggleChip key={m} soft on={d.secondaryMuscles.includes(m)} onClick={() => toggleMuscle('secondaryMuscles', m)}>{MUSCLE_LABEL[m]}</ToggleChip>)}
       </div>
       <p className="mt-4 text-sm text-muted">Equipment</p>
       <div className="mt-1.5 flex flex-wrap gap-1.5">

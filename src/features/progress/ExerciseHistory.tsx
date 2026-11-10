@@ -25,6 +25,9 @@ export function ExerciseHistoryPage() {
   const { map } = useExercises();
   const progress = useProgress(id);
   const [picked, setPicked] = useState<Range | null>(null);
+  // Opening another exercise starts again on its own best range.
+  const [pickedFor, setPickedFor] = useState(id);
+  if (pickedFor !== id) { setPickedFor(id); setPicked(null); }
   const [showAll, setShowAll] = useState(false);
   const [now] = useState(() => Date.now());
 
@@ -32,7 +35,7 @@ export function ExerciseHistoryPage() {
   const u = settings.units;
   const header = (
     <PageHeader
-      left={<button aria-label="Back" onClick={() => nav(-1)} className="-ml-2 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
+      left={<button aria-label="Back" onClick={() => nav(-1)} className="tap -ml-3 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
       title="History"
     />
   );
@@ -62,7 +65,7 @@ export function ExerciseHistoryPage() {
         <div role="tablist" aria-label="Range" className="mt-5 grid grid-cols-4 gap-1 rounded-xl bg-surface p-1">
           {RANGES.map((r) => (
             <button key={r.id} role="tab" aria-selected={r.id === range} onClick={() => setPicked(r.id)}
-              className={`rounded-lg py-2 text-sm font-semibold ${r.id === range ? 'bg-surface-2 text-ink' : 'text-muted'}`}>{r.label}</button>
+              className={`min-h-10 rounded-lg text-sm font-semibold ${r.id === range ? 'bg-surface-2 text-ink' : 'text-muted'}`}>{r.label}</button>
           ))}
         </div>
 
@@ -119,7 +122,7 @@ export function ExerciseHistoryPage() {
               ))}
             </ul>
             {sessions.length > shown.length && (
-              <button onClick={() => setShowAll(true)} className="mt-2 w-full rounded-xl py-3 text-sm font-semibold text-accent active:bg-surface">
+              <button onClick={() => setShowAll(true)} className="mt-2 min-h-11 w-full rounded-xl text-sm font-semibold text-ink active:bg-surface">
                 Show all {sessions.length} sessions
               </button>
             )}

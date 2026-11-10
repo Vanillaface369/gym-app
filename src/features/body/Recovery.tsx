@@ -5,6 +5,8 @@ import { db } from '../../db/db';
 import { MUSCLES, type Muscle } from '../../db/types';
 import { useExercises, useNow } from '../../lib/hooks';
 import { fmtShortDate, MUSCLE_LABEL, timeAgo } from '../../lib/format';
+
+const capitalise = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 import { FRESH, muscleRecovery, sessionDoses, type MuscleRecovery, type TrainedSession } from '../../lib/recovery';
 import { fmtSets } from '../../lib/targets';
 import { Sheet } from '../../components/ui';
@@ -65,7 +67,7 @@ export function Recovery() {
       <div className="mt-6 grid grid-cols-2 gap-2">
         <div className="rounded-2xl bg-surface p-3">
           <p className="text-xs text-muted">Last workout</p>
-          <p className="mt-1 text-lg font-bold">{data.last ? timeAgo(data.last.endedAt, now) : 'None yet'}</p>
+          <p className="mt-1 text-lg font-bold">{data.last ? capitalise(timeAgo(data.last.endedAt, now)) : 'None yet'}</p>
         </div>
         <div className="rounded-2xl bg-surface p-3">
           <p className="text-xs text-muted">Fresh muscles</p>
@@ -74,7 +76,7 @@ export function Recovery() {
       </div>
 
       <div className="relative mt-4">
-        <div className="mx-auto h-[min(31rem,62vh)] aspect-[558/1161]">
+        <div className="mx-auto h-[min(28rem,54vh)] aspect-[558/1161]">
           <BodyMap side={side} colour={colour} pick={pick} selected={selected} onSelect={setSelected} />
         </div>
         <button onClick={() => setSide(side === 'front' ? 'back' : 'front')} aria-label={`Show ${side === 'front' ? 'back' : 'front'}`}
@@ -116,8 +118,10 @@ export function Recovery() {
 function MuscleSheet({ rec, sessions, onClose, now }: { rec: MuscleRecovery | null; sessions: TrainedSession[]; onClose: () => void; now: number }) {
   const [value, setValue] = useState(100);
   const [shownFor, setShownFor] = useState<Muscle | null>(null);
+  // The set button only takes over once the slider has been moved: most visits are just to look.
+  const [touched, setTouched] = useState(false);
   const m = rec?.muscle ?? null;
-  if (m !== shownFor) { setShownFor(m); if (rec) setValue(Math.round(rec.percent / 5) * 5); }
+  if (m !== shownFor) { setShownFor(m); setTouched(false); if (rec) setValue(Math.round(rec.percent / 5) * 5); }
   if (!rec) return <Sheet open={false} onClose={onClose}>{null}</Sheet>;
 
   const hits = sessions.filter((s) => s.doses[rec.muscle]).slice(0, 5);
@@ -159,13 +163,14 @@ function MuscleSheet({ rec, sessions, onClose, now }: { rec: MuscleRecovery | nu
 
       <h3 className="mt-5 text-sm font-semibold">Set recovery by hand</h3>
       <div className="mt-2 flex items-center gap-3">
-        <input type="range" min={0} max={100} step={5} value={value} onChange={(e) => setValue(Number(e.target.value))}
+        <input type="range" min={0} max={100} step={5} value={value} onChange={(e) => { setValue(Number(e.target.value)); setTouched(true); }}
           aria-label={`${MUSCLE_LABEL[rec.muscle]} recovery percent`} className="flex-1 accent-[var(--color-accent)]" />
         <span className="tabular w-12 text-right font-semibold">{value}%</span>
       </div>
       <div className="mt-4 flex gap-2">
-        {rec.overridden && <button onClick={reset} className="rounded-2xl bg-surface-2 px-4 py-3.5 text-sm font-semibold">Use calculated</button>}
-        <button onClick={save} className="flex-1 rounded-2xl bg-accent py-3.5 font-bold text-accent-ink">Set to {value}%</button>
+        {rec.overridden && <button onClick={reset} className="min-h-12 rounded-2xl bg-surface-2 px-4 text-sm font-semibold">Use calculated</button>}
+        <button onClick={save} disabled={!touched}
+          className={`min-h-12 flex-1 rounded-2xl font-bold ${touched ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-muted'}`}>{touched ? `Set to ${value}%` : 'Move the slider to change it'}</button>
       </div>
     </Sheet>
   );

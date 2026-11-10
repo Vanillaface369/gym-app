@@ -32,7 +32,7 @@ export function ReportPage() {
   return (
     <div className="pb-16">
       <PageHeader
-        left={<button aria-label="Back" onClick={() => nav(-1)} className="-ml-2 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
+        left={<button aria-label="Back" onClick={() => nav(-1)} className="tap -ml-3 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
         title="Workout Report"
       />
       {data && (
@@ -59,7 +59,7 @@ function Heading({ title, ranges, value, onChange }: { title: string; ranges: { 
       <div role="tablist" aria-label={`${title} range`} className="mt-2 flex gap-1 rounded-xl bg-surface p-1">
         {ranges.map((r) => (
           <button key={r.id} role="tab" aria-selected={r.id === value} onClick={() => onChange(r.id)}
-            className={`flex-1 rounded-lg py-1.5 text-sm font-semibold ${r.id === value ? 'bg-surface-2 text-ink' : 'text-muted'}`}>{r.label}</button>
+            className={`min-h-10 flex-1 rounded-lg text-sm font-semibold ${r.id === value ? 'bg-surface-2 text-ink' : 'text-muted'}`}>{r.label}</button>
         ))}
       </div>
     </div>
@@ -76,11 +76,13 @@ function Carousel({ label, children }: { label: string; children: ReactNode[] })
         className="no-scrollbar -mx-4 flex snap-x snap-mandatory overflow-x-auto">
         {children.map((c, i) => <div key={i} className="w-full shrink-0 snap-center px-4">{c}</div>)}
       </div>
-      <div className="mt-3 flex justify-center gap-1.5">
+      <div className="mt-1 flex justify-center">
         {children.map((_, i) => (
-          <button key={i} aria-label={`Card ${i + 1}`} aria-current={i === page}
+          <button key={i} aria-label={`Card ${i + 1} of ${children.length}`} aria-current={i === page}
             onClick={() => ref.current?.scrollTo({ left: i * ref.current.clientWidth, behavior: 'smooth' })}
-            className={`h-1.5 rounded-full transition-all ${i === page ? 'w-4 bg-accent' : 'w-1.5 bg-line'}`} />
+            className="flex h-11 min-w-7 items-center justify-center">
+            <span className={`h-1.5 rounded-full transition-all ${i === page ? 'w-4 bg-ink' : 'w-1.5 bg-line'}`} />
+          </button>
         ))}
       </div>
     </div>
@@ -103,7 +105,7 @@ function Card({ title, value, badge, sub, fileName, children }: { title: string;
           <p className="text-xs font-semibold tracking-wider text-muted uppercase">{APP_NAME}</p>
           <button data-noshare aria-label={`Share ${title} card`} disabled={busy}
             onClick={async () => { setBusy(true); try { await shareCardImage(ref.current!, fileName); } finally { setBusy(false); } }}
-            className="-mt-1 -mr-1 rounded-full p-2 text-muted active:bg-surface-2 disabled:opacity-40"><IconUpload size={18} /></button>
+            className="tap -mt-1 -mr-1 rounded-full p-2 text-muted active:bg-surface-2 disabled:opacity-40"><IconUpload size={18} /></button>
         </div>
         <p className="text-2xl font-bold">{title}</p>
         <div className="mt-1 flex items-center gap-2">{value}{badge}</div>

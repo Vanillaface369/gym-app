@@ -501,7 +501,7 @@ export async function importWorkoutJson(text: string): Promise<WorkoutTemplate> 
 }
 
 // ---------- Editing finished workouts & logging past ones ----------
-export interface EditGroup { exerciseId: string; sets: { reps: number; weightKg: number }[] }
+export interface EditGroup { exerciseId: string; sets: { reps: number; weightKg: number; isWarmup?: boolean }[] }
 export interface SessionMeta { name: string; startedAt: number; durationSec: number }
 
 /** Rewrite a finished workout's details and sets, then recompute its totals and the affected PRs. */
@@ -520,7 +520,8 @@ export async function saveSessionEdits(sessionId: string, meta: SessionMeta, gro
     const setLogs: SetLog[] = kept.flatMap((g) =>
       g.sets.map((s, i) => ({
         id: uid(), sessionId, exerciseId: g.exerciseId, setIndex: i, reps: s.reps, weightKg: s.weightKg,
-        isWarmup: false, completedAt: meta.startedAt + Math.round(step * n++), e1rm: round1(e1rm(s.weightKg, s.reps)),
+        // Keep warm-ups as warm-ups: they stay out of volume, PRs and stats after an edit.
+        isWarmup: !!s.isWarmup, completedAt: meta.startedAt + Math.round(step * n++), e1rm: s.isWarmup ? 0 : round1(e1rm(s.weightKg, s.reps)),
       })),
     );
     const newEx = new Set(setLogs.map((s) => s.exerciseId));
@@ -561,7 +562,7 @@ export async function createManualSession(meta: SessionMeta, template?: WorkoutT
   if (template) {
     for (const t of [...template.items].sort((a, b) => a.order - b.order)) {
       const it = await buildItem(t, settings);
-      groups.push({ exerciseId: it.exerciseId, sets: it.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg })) });
+      groups.push({ exerciseId: it.exerciseId, sets: it.sets.map((s) => ({ reps: s.reps, weightKg: s.weightKg, isWarmup: s.isWarmup })) });
     }
   }
   const s = await db.sessions.get(id);

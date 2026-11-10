@@ -22,7 +22,7 @@ export function SettingsPage() {
   return (
     <div className="pb-24">
       <PageHeader
-        left={<button aria-label="Back" onClick={() => nav(-1)} className="-ml-2 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
+        left={<button aria-label="Back" onClick={() => nav(-1)} className="tap -ml-3 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
         title="Settings"
       />
       <div className="space-y-6 px-4">
@@ -42,17 +42,14 @@ export function SettingsPage() {
           <Row label="Units">
             <Segmented value={s.units} options={[['kg', 'kg'], ['lb', 'lb']]} onChange={(v) => updateSettings({ units: v })} />
           </Row>
-          <Row label="Week starts on">
-            <Segmented value={String(s.weekStart)} options={[['0', 'Sun'], ['1', 'Mon']]} onChange={(v) => updateSettings({ weekStart: Number(v) as 0 | 1 })} />
-          </Row>
         </Section>
 
         <Section title="Rest timer">
           <Row label="Default rest" hint="For new custom exercises">
             <div className="flex items-center gap-2">
-              <button className="h-9 w-9 rounded-lg bg-surface-2" onClick={() => updateSettings({ restDefaultSec: Math.max(15, s.restDefaultSec - 15) })}>−</button>
+              <button aria-label="Less rest" className="h-11 w-11 rounded-xl bg-surface-2 text-lg" onClick={() => updateSettings({ restDefaultSec: Math.max(15, s.restDefaultSec - 15) })}>−</button>
               <span className="tabular w-12 text-center">{fmtClock(s.restDefaultSec)}</span>
-              <button className="h-9 w-9 rounded-lg bg-surface-2" onClick={() => updateSettings({ restDefaultSec: s.restDefaultSec + 15 })}>+</button>
+              <button aria-label="More rest" className="h-11 w-11 rounded-xl bg-surface-2 text-lg" onClick={() => updateSettings({ restDefaultSec: s.restDefaultSec + 15 })}>+</button>
             </div>
           </Row>
           <Row label="Sound"><Toggle on={s.sound} onChange={(v) => updateSettings({ sound: v })} /></Row>
@@ -64,11 +61,11 @@ export function SettingsPage() {
 
         <Section title="App">
           {install.installed ? (
-            <ActionRow icon={<IconCheck size={20} />} label="Installed" hint="Opens from your home screen and works offline" disabled />
+            <ActionRow icon={<IconCheck size={20} />} label="Installed" hint="Opens from your home screen and works offline" />
           ) : install.canInstall ? (
             <ActionRow icon={<IconDownload size={20} />} label="Install app" hint="Adds Liftlog to your home screen; works offline" onClick={install.install} />
           ) : (
-            <ActionRow icon={<IconDownload size={20} />} label="Install app" hint="In Chrome: ⋮ menu → Add to Home screen" disabled />
+            <ActionRow icon={<IconDownload size={20} />} label="Install app" hint="In Chrome: ⋮ menu → Add to Home screen" />
           )}
         </Section>
 
@@ -88,13 +85,16 @@ export function SettingsPage() {
           )}
           <ActionRow icon={<IconUpload size={20} />} label="Import data (JSON)" hint="Replaces everything on this phone" onClick={() => fileRef.current?.click()} />
           <ActionRow icon={<IconUpload size={20} />} label="Import Fitbod history (CSV)" hint="Preview before anything is saved" onClick={() => nav('/import-fitbod')} />
-          <ActionRow icon={<IconTrash size={20} />} label="Reset all data" danger onClick={() => setConfirmReset(true)} />
           <input ref={fileRef} type="file" accept="application/json,.json" hidden
             onChange={async (e) => { const f = e.target.files?.[0]; if (f) setPendingImport(await f.text()); e.target.value = ''; }} />
-          {msg && <p className={`px-1 pt-2 text-sm ${msg.error ? 'text-danger' : 'text-accent'}`}>{msg.text}</p>}
+          {msg && <p role="status" className={`px-1 pt-2 text-sm ${msg.error ? 'text-danger' : 'text-accent'}`}>{msg.text}</p>}
         </Section>
 
-        <p className="pb-4 text-center text-xs text-muted">Stage 2 · Log tab</p>
+        <Section title="Reset">
+          <ActionRow icon={<IconTrash size={20} />} label="Reset all data" hint="Deletes everything on this phone" danger onClick={() => setConfirmReset(true)} />
+        </Section>
+
+        <p className="pb-4 text-center text-xs text-muted">Liftlog · your data stays on this phone</p>
       </div>
 
       <Confirm open={pendingImport !== null} title="Replace all data?" danger confirmLabel="Import"

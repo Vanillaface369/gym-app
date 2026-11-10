@@ -15,7 +15,8 @@ const WEEKS = 9; // this week + 8 previous
 const fmtRange = (from: number) => {
   const to = addDays(from, 6);
   const f = (t: number) => new Date(t).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
-  return `${f(from)} – ${f(to)}`;
+  // "8–14 Nov", or "29 Nov – 5 Dec" across months
+  return new Date(from).getMonth() === new Date(to).getMonth() ? `${new Date(from).getDate()}–${f(to)}` : `${f(from)} – ${f(to)}`;
 };
 
 export function TargetsTab() {
@@ -60,11 +61,14 @@ export function TargetsTab() {
     <div className="pt-safe px-4">
       <div className="flex items-end justify-between pt-6">
         <h1 className="text-3xl font-bold tracking-tight">Targets</h1>
-        <button onClick={() => setEditing(true)} className="-mr-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-accent active:bg-surface">
+        <button onClick={() => setEditing(true)} className="-mr-3 flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-ink active:bg-surface">
           <IconEdit size={16} />Edit targets
         </button>
       </div>
-      <p className="mt-1 text-sm text-muted">{isCurrent ? 'This week' : 'Week of'} · {fmtRange(week)}</p>
+      <div className="mt-1 flex min-h-11 items-center gap-2">
+        <p className="text-sm text-muted">{isCurrent ? 'This week · ' : ''}{fmtRange(week)}</p>
+        {!isCurrent && <button onClick={() => setPicked(null)} className="flex min-h-11 items-center rounded-full px-3 text-sm font-semibold text-ink ring-1 ring-line ring-inset active:bg-surface">Back to this week</button>}
+      </div>
 
       <div className="mt-4 flex justify-center">
         <HexRing size={220} stroke={12} pct={{ push: p.groups.push.pct, pull: p.groups.pull.pct, legs: p.groups.legs.pct }}
@@ -122,7 +126,7 @@ export function TargetsTab() {
                 <HexRing size={56} stroke={4} pct={{ push: wp.groups.push.pct, pull: wp.groups.pull.pct, legs: wp.groups.legs.pct }}>
                   <span className="tabular text-xs font-semibold">{wp.overall}%</span>
                 </HexRing>
-                <span className={`mt-0.5 text-[11px] ${sel ? 'text-ink' : 'text-muted'}`}>
+                <span className={`mt-0.5 text-xs ${sel ? 'text-ink' : 'text-muted'}`}>
                   {w === thisWeek ? 'This wk' : new Date(w).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
                 </span>
               </button>
@@ -148,10 +152,10 @@ function TargetEditor({ open, onClose, targets }: { open: boolean; onClose: () =
     <Sheet open={open} onClose={onClose} title="Weekly set targets">
       <p className="text-sm text-muted">Working sets per week for each group.</p>
       <div className="mt-4 grid grid-cols-3 gap-3">
-        {GROUPS.map(({ id }) => (
+        {GROUPS.map(({ id, label }) => (
           <label key={id} className="text-center">
-            <span className="mb-1.5 flex items-center justify-center gap-1.5 text-sm font-semibold capitalize">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: GROUP_COLOUR[id] }} />{id}
+            <span className="mb-1.5 flex items-center justify-center gap-1.5 text-sm font-semibold">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: GROUP_COLOUR[id] }} />{label.replace(' muscles', '')}
             </span>
             <NumberField ariaLabel={`${id} sets per week`} value={t[id]} onChange={(v) => setT((p) => ({ ...p, [id]: Math.min(200, v) }))} />
           </label>

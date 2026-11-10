@@ -35,7 +35,7 @@ export function SwipeToDelete({ onDelete, children, label = 'Remove', className 
 
   return (
     <Tag
-      className={`relative overflow-hidden transition-[max-height,opacity] duration-200 ${className}`}
+      className={`motion-safe-transition relative overflow-hidden transition-[max-height,opacity] duration-200 ${className}`}
       style={leaving ? { maxHeight: 0, opacity: 0, transitionDelay: '150ms' } : { maxHeight: 200 }}
       onTransitionEnd={(e) => { if (leaving && e.propertyName === 'max-height') remove(); }}
     >
@@ -45,7 +45,7 @@ export function SwipeToDelete({ onDelete, children, label = 'Remove', className 
       </div>
       <div
         ref={row}
-        className={`relative bg-bg ${animate ? 'transition-transform duration-200' : ''}`}
+        className={`relative bg-bg ${animate ? 'motion-safe-transition transition-transform duration-200' : ''}`}
         style={{ transform: `translateX(${dx}px)`, touchAction: 'pan-y' }}
         onPointerDown={(e) => {
           if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -92,7 +92,7 @@ export function useUndo(bottom = 'bottom-28') {
     <div role="status" className={`pointer-events-none fixed inset-x-0 ${bottom} z-40 mx-auto max-w-lg px-4`}>
       <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-surface-2 p-3 pl-4 shadow-xl shadow-black/50 ring-1 ring-line">
         <p className="min-w-0 flex-1 truncate text-sm">{undo.text}</p>
-        <button onClick={() => { undo.run(); setUndo(null); }} className="rounded-lg px-3 py-1.5 text-sm font-bold text-accent">Undo</button>
+        <button onClick={() => { undo.run(); setUndo(null); }} className="-my-1 min-h-11 rounded-lg px-4 text-sm font-bold text-accent active:bg-surface">Undo</button>
       </div>
     </div>
   );

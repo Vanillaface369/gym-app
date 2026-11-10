@@ -41,7 +41,7 @@ export function E1rmChart({ points, from, to, units, monthly }: { points: ChartP
                 </div>
               );
             }} />
-          <Line type="monotone" dataKey="value" stroke={ACCENT} strokeWidth={2} isAnimationActive={false}
+          <Line type="linear" dataKey="value" stroke={ACCENT} strokeWidth={2} isAnimationActive={false}
             dot={{ r: 4, fill: ACCENT, stroke: 'var(--color-bg)', strokeWidth: 2 }}
             activeDot={{ r: 6, fill: ACCENT, stroke: 'var(--color-bg)', strokeWidth: 2 }} />
         </LineChart>

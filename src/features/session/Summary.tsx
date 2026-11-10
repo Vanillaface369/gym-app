@@ -39,7 +39,7 @@ export function SummaryPage() {
     return (
       <div className="p-6 text-center">
         <p className="text-muted">That workout doesn't exist any more.</p>
-        <Link to="/log" className="mt-4 inline-block text-accent">Back to Log</Link>
+        <Link to="/log" className="mt-4 inline-flex min-h-11 items-center font-semibold text-ink underline decoration-line underline-offset-4">Back to Log</Link>
       </div>
     );
   }
@@ -64,17 +64,17 @@ export function SummaryPage() {
   return (
     <div className="pb-32">
       <PageHeader
-        left={isNew ? undefined : <button aria-label="Back" onClick={() => nav(-1)} className="-ml-2 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
+        left={isNew ? undefined : <button aria-label="Back" onClick={() => nav(-1)} className="tap -ml-3 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
         title={isNew ? 'Workout complete' : 'Workout'}
         right={
           <div className="-mr-2 flex">
-            <button aria-label="Edit workout" onClick={() => setEditing(true)} className="rounded-full p-2 text-muted active:bg-surface-2"><IconEdit size={20} /></button>
-            <button aria-label="Delete workout" onClick={() => setConfirmDelete(true)} className="rounded-full p-2 text-muted active:bg-surface-2"><IconTrash size={20} /></button>
+            <button aria-label="Edit workout" onClick={() => setEditing(true)} className="tap rounded-full p-2 text-muted active:bg-surface-2"><IconEdit size={20} /></button>
+            <button aria-label="Delete workout" onClick={() => setConfirmDelete(true)} className="tap rounded-full p-2 text-muted active:bg-surface-2"><IconTrash size={20} /></button>
           </div>
         }
       />
       <div className="px-4">
-        {isNew && <p className="text-sm font-semibold text-accent">Nice work 💪</p>}
+        {isNew && <p className="text-sm font-semibold text-accent">Nice work.</p>}
         {ups.length > 0 && (
           <div className="pop-in mb-4 rounded-2xl bg-surface p-4 ring-1 ring-accent/50" role="status">
             <p className="text-lg font-bold">Level up!</p>
@@ -90,7 +90,7 @@ export function SummaryPage() {
                 );
               })}
             </ul>
-            <Link to="/milestones" className="mt-2 inline-block text-sm font-semibold text-accent">See milestones</Link>
+            <Link to="/milestones" className="-mx-1 mt-2 inline-flex min-h-11 items-center gap-1 px-1 text-sm font-semibold text-ink">See milestones<IconChevronRight size={16} className="text-muted" /></Link>
           </div>
         )}
         <h1 className="text-3xl font-bold tracking-tight">{session.name}</h1>
@@ -124,8 +124,8 @@ export function SummaryPage() {
                 <ol className="tabular mt-3 space-y-1 text-sm">
                   {ss.map((s, i) => (
                     <li key={i} className="flex justify-between text-muted">
-                      <span>Set {i + 1}</span>
-                      <span className="text-ink">{s.reps} reps × {fmtWeight(s.weightKg, u)}</span>
+                      <span>{s.isWarmup ? 'Warm-up' : `Set ${ss.slice(0, i + 1).filter((x) => !x.isWarmup).length}`}</span>
+                      <span className={s.isWarmup ? '' : 'text-ink'}>{s.reps} reps × {fmtWeight(s.weightKg, u)}</span>
                     </li>
                   ))}
                 </ol>
@@ -142,8 +142,8 @@ export function SummaryPage() {
       </div>
 
       {isNew && (
-        <div className="pb-safe fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg bg-gradient-to-t from-bg via-bg to-transparent px-4 pt-6 pb-4">
-          <button onClick={() => nav('/', { replace: true })} className="w-full rounded-2xl bg-accent py-4 text-lg font-bold text-accent-ink">Done</button>
+        <div className="pb-bar fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg bg-gradient-to-t from-bg via-bg to-transparent px-4 pt-6">
+          <button onClick={() => nav('/', { replace: true })} className="min-h-14 w-full rounded-2xl bg-accent text-lg font-bold text-accent-ink">Done</button>
         </div>
       )}
 
@@ -159,7 +159,7 @@ function groupSets(session: WorkoutSession, sets: SetLog[]): EditGroup[] {
   for (const s of [...sets].sort((a, b) => a.setIndex - b.setIndex)) by.set(s.exerciseId, [...(by.get(s.exerciseId) ?? []), s]);
   const order = [...session.exerciseOrder, ...[...by.keys()].filter((k) => !session.exerciseOrder.includes(k))];
   return order.filter((id) => by.has(id)).map((exerciseId) => ({
-    exerciseId, sets: by.get(exerciseId)!.map((s) => ({ reps: s.reps, weightKg: s.weightKg })),
+    exerciseId, sets: by.get(exerciseId)!.map((s) => ({ reps: s.reps, weightKg: s.weightKg, isWarmup: s.isWarmup })),
   }));
 }
 
@@ -176,6 +176,12 @@ function EditSession({ session, groups: initial, units, onDone, onCancel }: { se
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const startName = session.name;
+  const dirty = name !== startName || minutes !== String(Math.max(1, Math.round(session.durationSec / 60)))
+    || date !== `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`
+    || time !== `${pad(start.getHours())}:${pad(start.getMinutes())}` || JSON.stringify(groups) !== JSON.stringify(initial);
+  const cancel = () => (dirty ? setConfirmDiscard(true) : onCancel());
 
   const mutate = (fn: (g: EditGroup[]) => void) => setGroups((prev) => { const next = structuredClone(prev); fn(next); return next; });
 
@@ -196,7 +202,7 @@ function EditSession({ session, groups: initial, units, onDone, onCancel }: { se
   return (
     <div className="pb-32">
       <PageHeader
-        left={<button aria-label="Cancel editing" onClick={onCancel} className="-ml-2 rounded-full p-2 text-muted active:bg-surface-2"><IconX /></button>}
+        left={<button aria-label="Cancel editing" onClick={cancel} className="tap -ml-3 rounded-full p-2 text-muted active:bg-surface-2"><IconX /></button>}
         title="Edit workout"
       />
       <div className="space-y-3 px-4">
@@ -215,26 +221,26 @@ function EditSession({ session, groups: initial, units, onDone, onCancel }: { se
                 <div className="flex items-center gap-2">
                   <ExerciseThumb ex={ex} size={36} />
                   <p className="flex-1 truncate font-semibold">{ex?.name ?? 'Unknown exercise'}</p>
-                  <button aria-label="Move up" disabled={gi === 0} onClick={() => mutate((n) => { [n[gi - 1], n[gi]] = [n[gi], n[gi - 1]]; })} className="rounded-full p-1.5 text-muted disabled:opacity-30"><IconUp size={18} /></button>
-                  <button aria-label="Move down" disabled={gi === groups.length - 1} onClick={() => mutate((n) => { [n[gi + 1], n[gi]] = [n[gi], n[gi + 1]]; })} className="rounded-full p-1.5 text-muted disabled:opacity-30"><IconDown size={18} /></button>
-                  <button aria-label={`Remove ${ex?.name}`} onClick={() => mutate((n) => { n.splice(gi, 1); })} className="rounded-full p-1.5 text-danger"><IconTrash size={18} /></button>
+                  <button aria-label="Move up" disabled={gi === 0} onClick={() => mutate((n) => { [n[gi - 1], n[gi]] = [n[gi], n[gi - 1]]; })} className="tap rounded-full p-1.5 text-muted disabled:opacity-30"><IconUp size={18} /></button>
+                  <button aria-label="Move down" disabled={gi === groups.length - 1} onClick={() => mutate((n) => { [n[gi + 1], n[gi]] = [n[gi], n[gi + 1]]; })} className="tap rounded-full p-1.5 text-muted disabled:opacity-30"><IconDown size={18} /></button>
+                  <button aria-label={`Remove ${ex?.name}`} onClick={() => mutate((n) => { n.splice(gi, 1); })} className="tap rounded-full p-1.5 text-muted active:bg-danger/15 active:text-danger"><IconTrash size={18} /></button>
                 </div>
-                <div className="mt-2 grid grid-cols-[2rem_1fr_1fr_2.25rem] items-center gap-2">
+                <div className="mt-2 grid grid-cols-[2rem_1fr_1fr_2.75rem] items-center gap-2">
                   <span />
-                  <span className="text-center text-[11px] font-semibold tracking-wider text-muted uppercase">Reps</span>
-                  <span className="text-center text-[11px] font-semibold tracking-wider text-muted uppercase">{units}</span>
+                  <span className="text-center text-xs font-semibold text-muted">Reps</span>
+                  <span className="text-center text-xs font-semibold text-muted">{units}</span>
                   <span />
                   {g.sets.map((s, si) => (
                     <div key={si} className="contents">
-                      <span className="text-center text-sm font-semibold text-muted">{si + 1}</span>
+                      <span className="text-center text-sm font-semibold text-muted" title={s.isWarmup ? 'Warm-up set' : undefined}>{s.isWarmup ? 'W' : g.sets.slice(0, si + 1).filter((x) => !x.isWarmup).length}</span>
                       <NumberField ariaLabel={`${ex?.name} set ${si + 1} reps`} value={s.reps} onChange={(v) => mutate((n) => { n[gi].sets[si].reps = Math.round(v); })} />
                       <NumberField ariaLabel={`${ex?.name} set ${si + 1} weight`} step={0.5} value={toDisplay(s.weightKg, units)} onChange={(v) => mutate((n) => { n[gi].sets[si].weightKg = fromDisplay(v, units); })} />
-                      <button aria-label={`Remove set ${si + 1}`} onClick={() => mutate((n) => { n[gi].sets.splice(si, 1); if (!n[gi].sets.length) n.splice(gi, 1); })} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted active:bg-surface-2"><IconX size={18} /></button>
+                      <button aria-label={`Remove set ${si + 1}`} onClick={() => mutate((n) => { n[gi].sets.splice(si, 1); if (!n[gi].sets.length) n.splice(gi, 1); })} className="tap rounded-lg text-muted active:bg-surface-2"><IconX size={18} /></button>
                     </div>
                   ))}
                 </div>
                 <button onClick={() => mutate((n) => { const last = n[gi].sets.at(-1); n[gi].sets.push({ reps: last?.reps ?? 10, weightKg: last?.weightKg ?? 0 }); })}
-                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-sm text-muted active:bg-surface-2"><IconPlus size={16} />Add set</button>
+                  className="mt-2 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg text-sm text-muted active:bg-surface-2"><IconPlus size={16} />Add set</button>
               </li>
             );
           })}
@@ -246,10 +252,13 @@ function EditSession({ session, groups: initial, units, onDone, onCancel }: { se
         <p className="text-xs text-muted">Sets with 0 reps are dropped. Records, volume and calories are recalculated when you save.</p>
       </div>
 
-      <div className="pb-safe fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-lg gap-3 bg-gradient-to-t from-bg via-bg to-transparent px-4 pt-6 pb-4">
-        <button onClick={onCancel} className="rounded-2xl bg-surface-2 px-6 py-4 font-semibold">Cancel</button>
-        <button disabled={saving} onClick={save} className="flex-1 rounded-2xl bg-accent py-4 text-lg font-bold text-accent-ink disabled:opacity-50">Save</button>
+      <div className="pb-bar fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-lg gap-3 bg-gradient-to-t from-bg via-bg to-transparent px-4 pt-6">
+        <button onClick={cancel} className="min-h-14 rounded-2xl bg-surface-2 px-6 font-semibold">Cancel</button>
+        <button disabled={saving} onClick={save} className="min-h-14 flex-1 rounded-2xl bg-accent text-lg font-bold text-accent-ink disabled:opacity-50">Save</button>
       </div>
+      <Confirm open={confirmDiscard} title="Discard your changes?" body="The workout stays as it was before you started editing." confirmLabel="Discard" danger
+        onCancel={() => setConfirmDiscard(false)}
+        onConfirm={() => { setConfirmDiscard(false); onCancel(); }} />
 
       <ExercisePicker open={adding} title="Add exercise" onClose={() => setAdding(false)} excludeIds={groups.map((g) => g.exerciseId)}
         onPick={(ex) => { mutate((n) => { n.push({ exerciseId: ex.id, sets: [{ reps: 10, weightKg: 0 }, { reps: 10, weightKg: 0 }, { reps: 10, weightKg: 0 }] }); }); setAdding(false); }} />

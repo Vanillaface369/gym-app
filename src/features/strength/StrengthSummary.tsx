@@ -88,8 +88,8 @@ export function StrengthSummary() {
           );
         })}
       </ul>
-      <Link to="/report" className="mt-2 flex items-center justify-center gap-1 rounded-xl py-3 text-sm font-semibold text-accent active:bg-surface">
-        See full report<IconChevronRight size={16} />
+      <Link to="/report" className="mt-2 flex min-h-11 items-center justify-center gap-0.5 rounded-xl text-sm font-semibold text-ink active:bg-surface">
+        See full report<IconChevronRight size={16} className="text-muted" />
       </Link>
     </section>
   );

@@ -22,7 +22,7 @@ export function BodyTab() {
       <div role="tablist" aria-label="Body" className="mt-4 grid grid-cols-2 gap-1 rounded-xl bg-surface p-1">
         {(['results', 'recovery'] as const).map((t) => (
           <button key={t} role="tab" aria-selected={tab === t} onClick={() => setParams(t === 'results' ? {} : { tab: t }, { replace: true })}
-            className={`rounded-lg py-2 text-sm font-semibold capitalize ${tab === t ? 'bg-surface-2 text-ink' : 'text-muted'}`}>{t}</button>
+            className={`min-h-10 rounded-lg text-sm font-semibold capitalize ${tab === t ? 'bg-surface-2 text-ink' : 'text-muted'}`}>{t}</button>
         ))}
       </div>
       {tab === 'results' ? <Results /> : <Recovery />}
@@ -48,7 +48,7 @@ function Results() {
       <section className="mt-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Benchmark lifts</h2>
-          <button onClick={() => setEditing(true)} className="-mr-2 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold text-accent active:bg-surface">
+          <button onClick={() => setEditing(true)} className="-mr-3 flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-ink active:bg-surface">
             <IconEdit size={16} />Edit
           </button>
         </div>
@@ -81,7 +81,8 @@ function BenchmarkCard({ ex, progress, units }: { ex: Exercise; progress?: Exerc
           <p className="tabular text-xl font-bold">{best ? fmtWeight(best.value, units) : '–'}</p>
           <p className="truncate text-xs text-muted">
             {best?.fromFitbod && 'From Fitbod'}
-            {!best?.fromFitbod && last && <>Last {fmtWeight(last.e1rm, units)}{prev && Math.abs(delta) > 0.05 && <span className={delta > 0 ? 'text-accent' : ''}> ({delta > 0 ? '▲' : '▼'} {fmtWeight(Math.abs(delta), units)})</span>}</>}
+            {!best?.fromFitbod && last && best && Math.abs(last.e1rm - best.value) < 0.05 && 'New best last session'}
+            {!best?.fromFitbod && last && !(best && Math.abs(last.e1rm - best.value) < 0.05) && <>Last {fmtWeight(last.e1rm, units)}{prev && Math.abs(delta) > 0.05 && <span className={delta > 0 ? 'text-accent' : ''}> ({delta > 0 ? '▲' : '▼'} {fmtWeight(Math.abs(delta), units)})</span>}</>}
             {!best && 'No sessions yet'}
           </p>
         </div>

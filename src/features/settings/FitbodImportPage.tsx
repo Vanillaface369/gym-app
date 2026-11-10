@@ -43,7 +43,7 @@ export function FitbodImportPage() {
   return (
     <div className="pb-32">
       <PageHeader
-        left={<button aria-label="Back" onClick={() => nav(-1)} className="-ml-2 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
+        left={<button aria-label="Back" onClick={() => nav(-1)} className="tap -ml-3 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
         title="Import Fitbod history"
       />
       <div className="px-4">
@@ -100,7 +100,7 @@ export function FitbodImportPage() {
             </ul>
             <p className="mt-2 text-xs text-muted">New exercises start without muscles; set them in My Plan → Manage exercises so they count toward recovery and targets.</p>
 
-            <div className="pb-safe fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-lg gap-3 bg-gradient-to-t from-bg via-bg to-transparent px-4 pt-6 pb-4">
+            <div className="pb-bar fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-lg gap-3 bg-gradient-to-t from-bg via-bg to-transparent px-4 pt-6">
               <button onClick={() => setPreview(null)} className="rounded-2xl bg-surface-2 px-6 py-4 font-semibold">Cancel</button>
               <button disabled={busy || !preview.toImport.length} onClick={run}
                 className="flex-1 rounded-2xl bg-accent py-4 text-lg font-bold text-accent-ink disabled:opacity-50">

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Confirm } from '../../components/ui';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../db/db';
 import { activeActions } from '../../db/actions';
@@ -21,6 +22,7 @@ export function ExerciseLogPage() {
   const [howToOpen, setHowToOpen] = useState(false);
   const [editHowTo, setEditHowTo] = useState(false);
   const [removeSetIdx, setRemoveSetIdx] = useState<number | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   if (active === undefined) return null;
   const item = active?.items.find((i) => i.key === key);
@@ -31,35 +33,42 @@ export function ExerciseLogPage() {
   const idx = active.items.indexOf(item);
   const next = active.items[idx + 1];
   const note = fmtProgress(item.progress, u);
+  const loggedHere = item.sets.filter((s) => s.done).length;
+  // The number on a set's bubble: W for warm-ups, else its working-set number.
+  const setLabel = (i: number) => (item.sets[i].isWarmup ? 'Warm-up' : `Set ${item.sets.slice(0, i + 1).filter((x) => !x.isWarmup).length}`);
+  const removeExercise = async () => {
+    const index = active.items.indexOf(item);
+    await activeActions.removeItem(item.key);
+    nav('/active', { replace: true, state: { removed: { item, index, name: ex?.name ?? 'exercise' } } });
+  };
 
   return (
     <div className="pb-48">
       <PageHeader
-        left={<button aria-label="Back" onClick={() => nav('/active')} className="-ml-2 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
+        left={<button aria-label="Back" onClick={() => nav('/active')} className="tap -ml-3 rounded-full p-2 active:bg-surface-2"><IconChevronLeft /></button>}
         title={<span className="text-sm text-muted">{idx + 1} of {active.items.length}</span>}
-        right={<button aria-label="More" onClick={() => setMoreOpen(true)} className="-mr-2 rounded-full p-2 text-muted active:bg-surface-2"><IconMore /></button>}
+        right={<button aria-label="More" onClick={() => setMoreOpen(true)} className="tap -mr-3 rounded-full p-2 text-muted active:bg-surface-2"><IconMore /></button>}
       />
       <div className="px-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-2xl leading-tight font-bold">{ex?.name}</h1>
             <p className="mt-1 text-sm text-muted">
-              {item.maxEffort && <span className="font-semibold text-accent">Max Effort Day · </span>}
+              {item.maxEffort && <span className="font-semibold text-ink">Max Effort Day · </span>}
               {ex?.primaryMuscles.map((m) => MUSCLE_LABEL[m]).join(', ')}
             </p>
             {note && <p className={`mt-1 text-sm font-semibold ${item.progress?.kind === 'deload' ? 'text-warn' : 'text-accent'}`}>Today: {note}</p>}
           </div>
-          <button onClick={() => setHowToOpen(true)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-surface-2 px-3.5 py-2 text-sm font-semibold"><IconInfo size={16} />How-To</button>
+          <button onClick={() => setHowToOpen(true)} className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-surface-2 px-3.5 text-sm font-semibold"><IconInfo size={16} />How-To</button>
         </div>
 
         <div className="no-scrollbar -mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1">
           <Chip onClick={() => setRestOpen(true)}><IconTimer size={16} />{fmtClock(item.restSec)}</Chip>
           <Chip onClick={() => nav(`/exercise/${item.exerciseId}`)}><IconHistory size={16} />History</Chip>
           <Chip onClick={() => setReplaceOpen(true)}><IconSwap size={16} />Replace</Chip>
-          <Chip onClick={() => setMoreOpen(true)}><IconMore size={16} />More</Chip>
         </div>
 
-        <div className="mt-5 grid grid-cols-[2.5rem_1fr_1fr_3rem] items-center gap-x-3 gap-y-2.5">
+        <div className="mt-5 grid grid-cols-[2.75rem_1fr_1fr_3rem] items-center gap-x-3 gap-y-2.5">
           <span />
           <span className="text-center text-xs font-semibold tracking-wider text-muted uppercase">Reps</span>
           <span className="text-center text-xs font-semibold tracking-wider text-muted uppercase">Weight ({u})</span>
@@ -72,7 +81,7 @@ export function ExerciseLogPage() {
                 <button
                   aria-label={`Set ${i + 1} options`}
                   onClick={() => setRemoveSetIdx(i)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${s.done ? 'bg-accent text-accent-ink' : isCurrent ? 'bg-surface-2 ring-2 ring-accent' : 'bg-surface-2 text-muted'}`}
+                  className={`flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold ${s.done ? 'bg-accent text-accent-ink' : isCurrent ? 'bg-surface-2 ring-2 ring-accent' : 'bg-surface-2 text-muted'}`}
                  title={s.isWarmup ? 'Warm-up set' : undefined}>{s.done ? <IconCheck size={18} /> : label}</button>
                 <NumberField ariaLabel={`Set ${i + 1} reps`} value={s.reps} done={s.done} highlight={isCurrent}
                   onChange={(n) => activeActions.updateSet(item.key, i, { reps: Math.round(n) })} />
@@ -89,21 +98,25 @@ export function ExerciseLogPage() {
           })}
         </div>
 
-        <button onClick={() => activeActions.addSet(item.key)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-line py-3 text-sm font-medium text-muted active:bg-surface-2">
-          <IconPlus size={18} />Add Set
-        </button>
+        <div className="mt-4 flex gap-3">
+          <button onClick={() => activeActions.addSet(item.key)} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-line text-sm font-medium text-muted active:bg-surface-2">
+            <IconPlus size={18} />Add set
+          </button>
+          {firstOpen >= 0 && (
+            <button onClick={() => { unlockAudio(); activeActions.logAll(item.key); }} className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-line text-sm font-medium text-muted active:bg-surface-2">
+              <IconCheck size={18} />Log all sets
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="pb-safe fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg bg-gradient-to-t from-bg via-bg to-transparent px-4 pt-6 pb-4">
+      <div className="pb-bar fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg bg-gradient-to-t from-bg via-bg to-transparent px-4 pt-6">
         {firstOpen >= 0 ? (
-          <div className="flex gap-3">
-            <button onClick={() => { unlockAudio(); activeActions.logAll(item.key); }} className="rounded-2xl bg-surface-2 px-5 py-4 font-semibold active:opacity-70">Log All Sets</button>
-            <button onClick={() => { unlockAudio(); activeActions.logNext(item.key); }}
-              className="flex-1 rounded-2xl bg-accent py-4 text-lg font-bold text-accent-ink shadow-xl shadow-black/50 active:scale-[0.98]">{item.sets[firstOpen].isWarmup ? 'Log Warm-up' : `Log Set ${item.sets.slice(0, firstOpen + 1).filter((x) => !x.isWarmup).length}`}</button>
-          </div>
+          <button onClick={() => { unlockAudio(); activeActions.logNext(item.key); }}
+            className="min-h-14 w-full rounded-2xl bg-accent text-lg font-bold text-accent-ink shadow-xl shadow-black/50 active:scale-[0.98]">Log {setLabel(firstOpen)}</button>
         ) : (
           <button onClick={() => nav(next ? `/active/${next.key}` : '/active')}
-            className="w-full rounded-2xl bg-accent py-4 text-lg font-bold text-accent-ink shadow-xl shadow-black/50">
+            className="min-h-14 w-full truncate rounded-2xl bg-accent px-4 text-lg font-bold text-accent-ink shadow-xl shadow-black/50">
             {next ? `Next: ${map.get(next.exerciseId)?.name}` : 'Back to workout'}
           </button>
         )}
@@ -118,7 +131,7 @@ export function ExerciseLogPage() {
       <Sheet open={howToOpen} onClose={() => setHowToOpen(false)} title={`How-To · ${ex?.name ?? ''}`}>
         {ex?.howToNotes ? <p className="whitespace-pre-wrap">{ex.howToNotes}</p> : <p className="text-muted">No notes yet.</p>}
         {ex?.howToUrl && (
-          <a href={ex.howToUrl} target="_blank" rel="noreferrer" className="mt-4 flex items-center gap-2 rounded-xl bg-surface-2 p-3 font-medium text-accent">
+          <a href={ex.howToUrl} target="_blank" rel="noreferrer" className="mt-4 flex items-center gap-2 rounded-xl bg-surface-2 p-3 font-medium text-ink underline decoration-line underline-offset-4">
             <IconLink size={18} /><span className="truncate">{ex.howToUrl}</span>
           </a>
         )}
@@ -129,11 +142,16 @@ export function ExerciseLogPage() {
       <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title={ex?.name}>
         <SheetRow icon={<IconEdit />} label="Edit How-To notes & link" onClick={() => { setMoreOpen(false); setEditHowTo(true); }} />
         <SheetRow icon={<IconPlus />} label="Add set" onClick={() => { activeActions.addSet(item.key); setMoreOpen(false); }} />
+        {firstOpen >= 0 && <SheetRow icon={<IconCheck />} label="Log all remaining sets" onClick={() => { unlockAudio(); activeActions.logAll(item.key); setMoreOpen(false); }} />}
         <SheetRow icon={<IconTrash />} label="Remove exercise from this workout" danger
-          onClick={async () => { setMoreOpen(false); await activeActions.removeItem(item.key); nav('/active', { replace: true }); }} />
+          onClick={() => { setMoreOpen(false); if (loggedHere) setConfirmRemove(true); else removeExercise(); }} />
       </Sheet>
+      <Confirm open={confirmRemove} title={`Remove ${ex?.name ?? 'this exercise'}?`} danger confirmLabel="Remove"
+        body={`You've logged ${loggedHere} set${loggedHere === 1 ? '' : 's'} of it. ${loggedHere === 1 ? 'It' : 'They'} won't be saved.`}
+        onCancel={() => setConfirmRemove(false)}
+        onConfirm={() => { setConfirmRemove(false); removeExercise(); }} />
 
-      <Sheet open={removeSetIdx !== null} onClose={() => setRemoveSetIdx(null)} title={`Set ${(removeSetIdx ?? 0) + 1}`}>
+      <Sheet open={removeSetIdx !== null} onClose={() => setRemoveSetIdx(null)} title={removeSetIdx !== null && item.sets[removeSetIdx] ? setLabel(removeSetIdx) : ''}>
         <SheetRow icon={<IconMinus />} label="Remove this set" danger disabled={item.sets.length <= 1}
           onClick={() => { activeActions.removeSet(item.key, removeSetIdx!); setRemoveSetIdx(null); }} />
       </Sheet>
