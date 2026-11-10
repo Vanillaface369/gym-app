@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findColumns, groupWorkouts, matchExercise, nameScore, parseCsv, parseDate, parseFitbod } from './fitbod';
+import { findColumns, groupWorkouts, matchExercise, nameScore, parseCsv, parseDate, parseFitbod, scaleCalories, seededToDrop } from './fitbod';
 
 const CSV = [
   'Date,Exercise,Reps,Weight(kg),Duration(s),Distance(m),Incline,Resistance,isWarmup,Note,multiplier',
@@ -55,5 +55,29 @@ describe('fitbod import', () => {
     expect(matchExercise('Leg Presses', mine).id).toBe('leg-press');
     expect(matchExercise('Barbell Back Squat', mine).id).toBeNull();
     expect(nameScore('Dumbbell Bicep Curl', 'Seated Dumbbell Curl')).toBeLessThan(0.8); // close-ish, but left for the user to confirm
+  });
+});
+
+describe('fitbod import totals and records', () => {
+  it('scales calories down to the Fitbod total, and only down', () => {
+    const out = scaleCalories([300, 300, 400], 500);
+    expect(out).toEqual([150, 150, 200]);
+    expect(scaleCalories([100, 100], 500)).toEqual([100, 100]); // under budget: unchanged
+    expect(scaleCalories([100, 100], 0)).toEqual([100, 100]);   // no budget left: keep estimates
+    const odd = scaleCalories([333, 333, 333, 333], 1000);      // rounding still lands on the total exactly
+    expect(odd.reduce((a, b) => a + b, 0)).toBe(1000);
+  });
+
+  it('keeps a seeded PR the imported sets never reach, drops one they match or beat', () => {
+    const seeded = [
+      { id: 'a', exerciseId: 'lat', type: 'e1rm', value: 90.7 },
+      { id: 'b', exerciseId: 'row', type: 'e1rm', value: 60 },
+    ];
+    const sets = [
+      { exerciseId: 'lat', weightKg: 65, e1rm: 86.7, isWarmup: false },
+      { exerciseId: 'lat', weightKg: 80, e1rm: 95, isWarmup: true }, // warm-ups don't count
+      { exerciseId: 'row', weightKg: 50, e1rm: 66.7, isWarmup: false },
+    ];
+    expect(seededToDrop(seeded, sets).map((r) => r.id)).toEqual(['b']);
   });
 });

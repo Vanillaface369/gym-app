@@ -4,7 +4,7 @@ import { getSettings, rebuildRecords, updateSettings } from './actions';
 import type { Exercise, SetLog, SplitDay, WorkoutSession } from './types';
 import { caloriesEst, e1rm, round1, volumeKg } from '../lib/calc';
 import { uid } from '../lib/format';
-import { dayOf, groupWorkouts, matchExercise, parseFitbod, type FitbodWorkout } from '../lib/fitbod';
+import { dayOf, groupWorkouts, matchExercise, parseFitbod, scaleCalories, seededToDrop, type FitbodWorkout } from '../lib/fitbod';
 
 export interface NameRow { name: string; sets: number; workouts: number; match: string | null; score: number }
 export interface ImportPreview {
@@ -107,16 +107,22 @@ export async function applyFitbod(preview: ImportPreview, choices: Record<string
   }
   if (!sessions.length) return { workouts: 0, sets: 0, newExercises: 0 };
 
+  // Keep lifetime calories at Fitbod's figure: scale the estimates down if they add up to more than it.
+  const scaled = scaleCalories(sessions.map((x) => x.caloriesEst), settings.lifetimeOffset.calories);
+  sessions.forEach((x, i) => { x.caloriesEst = scaled[i]; });
+  calories = scaled.reduce((a, b) => a + b, 0);
+
   await db.transaction('rw', [db.exercises, db.sessions, db.sets], async () => {
     if (created.length) await db.exercises.bulkAdd(created);
     await db.sessions.bulkAdd(sessions);
     await db.sets.bulkAdd(setLogs);
   });
 
-  // PRs: the real sessions replace any carried-over (seeded) records for these exercises, then everything is replayed in order.
+  // PRs: real sessions replace carried-over (seeded) records they match or beat; a seeded best the file never reaches
+  // stays (so the PR doesn't go backwards). Then everything is replayed in order.
   const touched = [...new Set(setLogs.map((s) => s.exerciseId))];
   const seeded = (await db.records.where('exerciseId').anyOf(touched).toArray()).filter((r) => !r.sessionId);
-  await db.records.bulkDelete(seeded.map((r) => r.id));
+  await db.records.bulkDelete(seededToDrop(seeded, setLogs).map((r) => r.id));
   await rebuildRecords(touched);
 
   // The starting totals were Fitbod's lifetime numbers; take off what's now real data so nothing counts twice.

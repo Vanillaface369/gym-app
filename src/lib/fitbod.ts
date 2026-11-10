@@ -145,3 +145,38 @@ export const dayOf = (ts: number) => {
   const d = new Date(ts);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
+
+// ---- Keeping lifetime totals and records in line with Fitbod ----
+
+/**
+ * The app estimates calories from bodyweight and duration, which runs higher than Fitbod's own numbers. When the
+ * estimates for imported workouts add up to more than Fitbod's lifetime calories (`budget`), scale them down so the
+ * lifetime total stays at Fitbod's figure. With no budget left (e.g. a second import), estimates are kept as they are.
+ */
+export function scaleCalories(estimates: number[], budget: number): number[] {
+  const total = estimates.reduce((a, b) => a + b, 0);
+  if (budget <= 0 || total <= budget) return estimates;
+  const f = budget / total;
+  const out = estimates.map((c) => Math.round(c * f));
+  // Put any rounding difference on the largest workout so the total lands exactly on the budget.
+  const diff = Math.round(budget) - out.reduce((a, b) => a + b, 0);
+  if (diff) { const i = out.indexOf(Math.max(...out)); out[i] = Math.max(0, out[i] + diff); }
+  return out;
+}
+
+export interface SeededRecord { id: string; exerciseId: string; type: string; value: number }
+export interface ImportedSet { exerciseId: string; weightKg: number; e1rm: number; isWarmup: boolean }
+
+/**
+ * Carried-over (seeded) records to drop after an import: those the imported sets match or beat. A seeded best that the
+ * file never reaches (e.g. Fitbod's 90.7 kg Lat Pulldown e1RM) is kept, so the PR doesn't go backwards.
+ */
+export function seededToDrop(seeded: SeededRecord[], sets: ImportedSet[]): SeededRecord[] {
+  const best = (exerciseId: string, type: string) => {
+    const work = sets.filter((s) => s.exerciseId === exerciseId && !s.isWarmup);
+    if (type === 'e1rm') return Math.max(-Infinity, ...work.map((s) => s.e1rm));
+    if (type === 'weight') return Math.max(-Infinity, ...work.map((s) => s.weightKg));
+    return Infinity; // other record types aren't seeded; replace them with real data
+  };
+  return seeded.filter((r) => r.value <= best(r.exerciseId, r.type));
+}
