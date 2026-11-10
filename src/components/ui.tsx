@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { Category, Exercise } from '../db/types';
 import { IconX } from './icons';
+import { muscleIconView } from '../features/body/muscleIcon';
 
 export function Sheet({ open, onClose, title, children, tall }: {
   open: boolean; onClose: () => void; title?: ReactNode; children: ReactNode; tall?: boolean;
@@ -83,16 +84,29 @@ export const CATEGORY_COLOUR: Record<Category, string> = {
   push: 'var(--color-push)', pull: 'var(--color-pull)', legs: 'var(--color-legs)', core: 'var(--color-core)', other: 'var(--color-muted)',
 };
 
-/** Original thumbnail: category-coloured tile with the exercise's initials. */
+/** Thumbnail: a crop of the body map with the exercise's main muscles lit in its category colour (initials if it has no muscles). */
 export function ExerciseThumb({ ex, size = 48, done }: { ex?: Exercise; size?: number; done?: boolean }) {
-  const initials = (ex?.name ?? '?').split(/[\s-]+/).filter((w) => /[A-Za-z]/.test(w[0] ?? '')).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   const colour = CATEGORY_COLOUR[ex?.category ?? 'other'];
+  const view = ex ? muscleIconView(ex.primaryMuscles, ex.secondaryMuscles) : null;
+  const initials = (ex?.name ?? '?').split(/[\s-]+/).filter((w) => /[A-Za-z]/.test(w[0] ?? '')).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <div
-        className="flex h-full w-full items-center justify-center rounded-xl text-sm font-bold"
-        style={{ background: `color-mix(in srgb, ${colour} 18%, transparent)`, color: colour }}
-      >{initials}</div>
+        className="flex h-full w-full items-center justify-center overflow-hidden rounded-xl text-sm font-bold"
+        style={{ background: `color-mix(in srgb, ${colour} 14%, var(--color-surface-2))`, color: colour }}
+      >
+        {view ? (
+          <svg viewBox={view.viewBox} className="h-full w-full" aria-hidden="true">
+            <path d={view.figure.body} fill="var(--color-body)" />
+            {view.figure.regions.map((r) => {
+              const lit = r.muscles.some((m) => ex!.primaryMuscles.includes(m)) ? 1
+                : r.muscles.some((m) => ex!.secondaryMuscles.includes(m)) ? 0.4 : 0;
+              return <path key={r.muscles.join()} d={r.d}
+                fill={lit ? colour : 'color-mix(in srgb, var(--color-body) 80%, var(--color-ink))'} fillOpacity={lit || 1} />;
+            })}
+          </svg>
+        ) : initials}
+      </div>
       {done && (
         <span className="absolute -right-1.5 -bottom-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-accent-ink ring-2 ring-bg">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
