@@ -46,6 +46,7 @@ This project is built in turns by two separate Claude sessions that don't share 
 - Edits on the Workout tab (the ⋯ menu) change the **template**. Edits during an active workout change only that session.
 - `NumberField` keeps local text while focused. A controlled value fed straight from Dexie drops keystrokes, so don't change it back.
 - `ActiveWorkoutPage` uses a `leaving` ref so its "no active workout, go home" redirect doesn't race navigation to the summary.
+- Swipe left (past 40% of the row) removes an exercise from the Workout tab list (changes the template, like the ⋯ menu) or the active workout (that session only). An Undo bar shows for 5 s. `SwipeToDelete` / `useUndo` in `src/components/Swipe.tsx`. The user asked for this.
 - Cancelling edit on a workout with no exercises deletes it (for blank past workouts created with +).
 - Weekly goal and streak count distinct training days. The current week only adds to the streak once met and never breaks it.
 - Exercise history: e1RM counts every working set (warm-ups skipped), including Max Effort singles. Week/Month plot every session; 6 Month/Year plot each month's best. The range opens on the shortest one with at least 2 points, so the first view is a line, not a dot.

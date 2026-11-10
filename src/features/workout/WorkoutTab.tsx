@@ -12,6 +12,7 @@ import {
   IconChevronRight, IconDown, IconMore, IconPlus, IconStar, IconSwap, IconTimer, IconTrash, IconUp, IconEdit,
 } from '../../components/icons';
 import { SwitchSheet } from './SwitchSheet';
+import { SwipeToDelete, useUndo } from '../../components/Swipe';
 
 export function WorkoutTab() {
   const settings = useSettings();
@@ -36,6 +37,7 @@ export function WorkoutTab() {
   const [restFor, setRestFor] = useState<TemplateItem | null>(null);
   const [editFor, setEditFor] = useState<TemplateItem | null>(null);
   const [adding, setAdding] = useState(false);
+  const undo = useUndo('bottom-48'); // above the Start Workout button and tab bar
 
   const items = template ? [...template.items].sort((a, b) => a.order - b.order) : [];
   const muscles = new Set(items.flatMap((it) => map.get(it.exerciseId)?.primaryMuscles ?? []));
@@ -87,7 +89,12 @@ export function WorkoutTab() {
               const trend = preview?.trends.get(it.exerciseId);
               const note = fmtProgress(p?.progress, settings.units);
               return (
-                <li key={`${it.exerciseId}-${it.order}`} className="flex items-center gap-3 py-3">
+                <SwipeToDelete as="li" key={`${it.exerciseId}-${it.order}`} onDelete={() => {
+                  const before = structuredClone(template);
+                  update((t) => { const i = idxOf(t, it); if (i >= 0) t.items.splice(i, 1); });
+                  undo.show(`Removed ${ex?.name ?? 'exercise'}`, () => saveTemplate(before));
+                }}>
+                <div className="flex items-center gap-3 py-3">
                   <ExerciseThumb ex={ex} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{ex?.name ?? 'Unknown exercise'}</p>
@@ -104,7 +111,8 @@ export function WorkoutTab() {
                   </div>
                   {ex?.preference === 1 && <IconStar size={16} className="text-accent" aria-label="More often" />}
                   <button aria-label={`Options for ${ex?.name}`} onClick={() => setMenuFor(it)} className="-mr-2 rounded-full p-2 text-muted active:bg-surface-2"><IconMore /></button>
-                </li>
+                </div>
+                </SwipeToDelete>
               );
             })}
           </ul>
@@ -112,11 +120,12 @@ export function WorkoutTab() {
             <IconPlus size={18} />Add exercise
           </button>
           <p className="mt-3 text-center text-xs text-muted">
-            {isGenerated ? 'Generated for you. Changes here stay with this workout.' : `Changes here update your ${template.name} template.`}
+            Swipe an exercise left to remove it. {isGenerated ? 'Generated for you. Changes here stay with this workout.' : `Changes here update your ${template.name} template.`}
           </p>
         </>
       )}
 
+      {undo.bar}
       <SwitchSheet open={switchOpen} onClose={() => setSwitchOpen(false)} currentId={template?.id} current={template ?? null} />
 
       <Sheet open={gymOpen} onClose={() => setGymOpen(false)} title="Where are you training?">

@@ -280,6 +280,9 @@ export const activeActions = {
       a.items[idx] = fresh;
     });
   },
+  /** Put a removed item back where it was (Undo after a swipe). */
+  insertItem: (item: ActiveItem, index: number) =>
+    mutateActive((a) => { if (!a.items.some((x) => x.key === item.key)) a.items.splice(Math.min(index, a.items.length), 0, item); }),
   removeItem: (itemKey: string) => mutateActive((a) => { a.items = a.items.filter((x) => x.key !== itemKey); }),
   moveItem: (itemKey: string, dir: -1 | 1) =>
     mutateActive((a) => {

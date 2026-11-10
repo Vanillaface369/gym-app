@@ -8,6 +8,7 @@ import { Confirm, ExerciseThumb, PageHeader, Sheet, SheetRow } from '../../compo
 import { ExercisePicker } from '../../components/ExercisePicker';
 import { IconDown, IconMore, IconPlus, IconSwap, IconTrash, IconUp, IconX } from '../../components/icons';
 import { RestTimerUI, restRemainingMs } from './RestTimer';
+import { SwipeToDelete, useUndo } from '../../components/Swipe';
 
 export function ActiveWorkoutPage() {
   const active = useActive();
@@ -22,6 +23,7 @@ export function ActiveWorkoutPage() {
   const [replaceFor, setReplaceFor] = useState<ActiveItem | null>(null);
   const [adding, setAdding] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const undo = useUndo();
   // Set while we're finishing/discarding, so the "no workout -> go home" redirect doesn't race our own navigation.
   const leaving = useRef(false);
 
@@ -58,14 +60,18 @@ export function ActiveWorkoutPage() {
         </div>
 
         <ul className="divide-y divide-line">
-          {active.items.map((it) => {
+          {active.items.map((it, index) => {
             const ex = map.get(it.exerciseId);
             const done = it.sets.filter((s) => s.done).length;
             const complete = done === it.sets.length && it.sets.length > 0;
             const resting = active.rest?.itemKey === it.key && restLeft !== null && restLeft > 0;
             const top = Math.max(...it.sets.map((s) => s.weightKg));
             return (
-              <li key={it.key} className="flex items-center gap-1">
+              <SwipeToDelete as="li" key={it.key} onDelete={() => {
+                activeActions.removeItem(it.key);
+                undo.show(`Removed ${ex?.name ?? 'exercise'}`, () => activeActions.insertItem(it, index));
+              }}>
+              <div className="flex items-center gap-1">
                 <Link to={`/active/${it.key}`} className="flex min-w-0 flex-1 items-center gap-3 py-3 active:opacity-70">
                   <ExerciseThumb ex={ex} done={complete} />
                   <div className="min-w-0 flex-1">
@@ -78,7 +84,8 @@ export function ActiveWorkoutPage() {
                   </div>
                 </Link>
                 <button aria-label={`Options for ${ex?.name}`} onClick={() => setMenuFor(it)} className="-mr-2 rounded-full p-2 text-muted active:bg-surface-2"><IconMore /></button>
-              </li>
+              </div>
+              </SwipeToDelete>
             );
           })}
         </ul>
@@ -94,6 +101,7 @@ export function ActiveWorkoutPage() {
         </button>
       </div>
 
+      {undo.bar}
       <RestTimerUI active={active} label={active.rest ? map.get(active.items.find((i) => i.key === active.rest!.itemKey)?.exerciseId ?? '')?.name : undefined} />
 
       <Sheet open={!!menuFor} onClose={() => setMenuFor(null)} title={menuFor ? map.get(menuFor.exerciseId)?.name : ''}>
