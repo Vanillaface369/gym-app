@@ -70,14 +70,16 @@ export function ExerciseHistoryPage() {
         </div>
 
         <div className="mt-5">
-          <p className="text-xs font-semibold tracking-wider text-muted uppercase">Estimated 1RM</p>
+          <p className="text-sm text-muted">Estimated 1RM, latest</p>
           {sum ? (
-            <p className="tabular mt-1 text-3xl font-bold">
-              {sum.min === sum.max ? toDisplay(sum.max, u) : `${toDisplay(sum.min, u)}–${toDisplay(sum.max, u)}`}
-              <span className="text-lg font-semibold text-muted"> {u} in 1 rep</span>
+            <p className="tabular mt-0.5 text-4xl leading-tight font-bold">
+              {toDisplay(chart[chart.length - 1].e1rm, u)}<span className="text-xl font-semibold text-muted"> {u}</span>
             </p>
-          ) : <p className="mt-1 text-3xl font-bold text-muted">–</p>}
-          <p className="text-sm text-muted">{fmtDay(from, new Date(from).getFullYear() !== new Date(now).getFullYear())} – {fmtDay(now, true)}{isMonthly(range) && ' · best per month'}</p>
+          ) : <p className="mt-0.5 text-4xl leading-tight font-bold text-muted">–</p>}
+          <p className="tabular text-sm text-muted">
+            {sum && sum.min !== sum.max && <>Range {toDisplay(sum.min, u)}–{toDisplay(sum.max, u)} {u} · </>}
+            {fmtDay(from, new Date(from).getFullYear() !== new Date(now).getFullYear())} – {fmtDay(now, true)}{isMonthly(range) && ' · best per month'}
+          </p>
         </div>
 
         <div className="mt-3 rounded-2xl bg-surface pt-2 pb-1">

@@ -78,15 +78,20 @@ function BenchmarkCard({ ex, progress, units }: { ex: Exercise; progress?: Exerc
         <ExerciseThumb ex={ex} size={44} />
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{ex.name}</p>
-          <p className="tabular text-xl font-bold">{best ? fmtWeight(best.value, units) : '–'}</p>
-          <p className="truncate text-xs text-muted">
-            {best?.fromFitbod && 'From Fitbod'}
-            {!best?.fromFitbod && last && best && Math.abs(last.e1rm - best.value) < 0.05 && 'New best last session'}
-            {!best?.fromFitbod && last && !(best && Math.abs(last.e1rm - best.value) < 0.05) && <>Last {fmtWeight(last.e1rm, units)}{prev && Math.abs(delta) > 0.05 && <span className={delta > 0 ? 'text-accent' : ''}> ({delta > 0 ? '▲' : '▼'} {fmtWeight(Math.abs(delta), units)})</span>}</>}
-            {!best && 'No sessions yet'}
-          </p>
+          {/* Name gets the full width above; value and sparkline share the row below. */}
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="tabular text-xl font-bold">{best ? fmtWeight(best.value, units) : '–'}</p>
+              <p className="truncate text-xs text-muted">
+                {best?.fromFitbod && 'From Fitbod'}
+                {!best?.fromFitbod && last && best && Math.abs(last.e1rm - best.value) < 0.05 && 'New best last session'}
+                {!best?.fromFitbod && last && !(best && Math.abs(last.e1rm - best.value) < 0.05) && <>Last {fmtWeight(last.e1rm, units)}{prev && Math.abs(delta) > 0.05 && <span className={delta > 0 ? 'text-accent' : ''}> ({delta > 0 ? '▲' : '▼'} {fmtWeight(Math.abs(delta), units)})</span>}</>}
+                {!best && 'No sessions yet'}
+              </p>
+            </div>
+            <Sparkline values={pts.slice(-8).map((p) => p.e1rm)} />
+          </div>
         </div>
-        <Sparkline values={pts.slice(-8).map((p) => p.e1rm)} />
         <IconChevronRight size={18} className="shrink-0 text-muted" />
       </Link>
     </li>

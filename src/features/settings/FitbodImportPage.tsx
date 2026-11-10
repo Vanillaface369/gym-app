@@ -53,9 +53,11 @@ export function FitbodImportPage() {
               In Fitbod, export your workout history as a CSV file, then choose it here. It's read on this phone only; nothing is uploaded.
               You'll see a preview before anything is saved.
             </p>
-            <button onClick={() => fileRef.current?.click()} className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-4 font-bold text-accent-ink">
-              <IconUpload size={20} />Choose CSV file
-            </button>
+            <div className="pb-bar fixed inset-x-0 bottom-0 z-30 mx-auto max-w-lg bg-gradient-to-t from-bg via-bg to-transparent px-4 pt-6">
+              <button onClick={() => fileRef.current?.click()} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-accent text-lg font-bold text-accent-ink active:scale-[0.98]">
+                <IconUpload size={20} />Choose CSV file
+              </button>
+            </div>
             <input ref={fileRef} type="file" accept=".csv,text/csv,text/plain" hidden
               onChange={(e) => { const f = e.target.files?.[0]; if (f) read(f); e.target.value = ''; }} />
           </>
@@ -101,9 +103,9 @@ export function FitbodImportPage() {
             <p className="mt-2 text-xs text-muted">New exercises start without muscles; set them in My Plan → Manage exercises so they count toward recovery and targets.</p>
 
             <div className="pb-bar fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-lg gap-3 bg-gradient-to-t from-bg via-bg to-transparent px-4 pt-6">
-              <button onClick={() => setPreview(null)} className="rounded-2xl bg-surface-2 px-6 py-4 font-semibold">Cancel</button>
+              <button onClick={() => setPreview(null)} className="min-h-14 rounded-2xl bg-surface-2 px-6 font-semibold">Cancel</button>
               <button disabled={busy || !preview.toImport.length} onClick={run}
-                className="flex-1 rounded-2xl bg-accent py-4 text-lg font-bold text-accent-ink disabled:opacity-50">
+                className="min-h-14 flex-1 rounded-2xl bg-accent text-lg font-bold text-accent-ink disabled:opacity-50">
                 {busy ? 'Importing…' : `Import ${preview.toImport.length} workouts`}
               </button>
             </div>
@@ -112,12 +114,12 @@ export function FitbodImportPage() {
 
         {result && (
           <div className="rounded-2xl bg-surface p-5 text-center">
-            <p className="text-4xl">✓</p>
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-ink"><IconCheck size={30} /></span>
             <p className="mt-2 text-xl font-bold">Imported {result.workouts} workouts</p>
             <p className="mt-1 text-sm text-muted">
               {result.sets.toLocaleString('en-AU')} sets{result.newExercises ? `, ${result.newExercises} new exercise${result.newExercises > 1 ? 's' : ''}` : ''}. PRs, charts and strength scores now include them.
             </p>
-            <Link to="/log" className="mt-4 block rounded-2xl bg-accent py-3.5 font-bold text-accent-ink">See your Log</Link>
+            <Link to="/log" className="mt-4 flex min-h-12 items-center justify-center rounded-2xl bg-accent font-bold text-accent-ink">See your Log</Link>
           </div>
         )}
       </div>

@@ -8,7 +8,7 @@ import { fmtBigWeight, fmtDuration } from '../../lib/format';
 import {
   addDays, dayKey, lifetimeTotals, longestStreak, MILESTONE_TIERS, milestoneLevel, monthGrid, startOfDay, startOfWeek, trainingDays, weekStreak, weekdayLabels,
 } from '../../lib/stats';
-import { CATEGORY_COLOUR, Sheet } from '../../components/ui';
+import { ExerciseThumb, Sheet } from '../../components/ui';
 import { IconChevronLeft, IconChevronRight, IconDown, IconFlame, IconPlus, IconTrophy, IconUp, IconWeight, IconX } from '../../components/icons';
 import { ManualLogSheet } from './ManualLogSheet';
 
@@ -145,7 +145,7 @@ export function LogTab() {
       </section>
 
       <div className="mt-6 mb-2 flex items-center justify-between">
-        <h2 className="text-xs font-semibold tracking-wider text-muted uppercase">
+        <h2 className="text-lg font-semibold">
           {selectedDay ? new Date(shown[0]?.startedAt ?? now).toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' }) : 'Past workouts'}
         </h2>
         {selectedDay && <button onClick={() => setSelectedDay(null)} className="-mr-2 flex min-h-11 items-center gap-1 rounded-full px-2 text-sm font-semibold text-ink active:bg-surface-2"><IconX size={14} />Show all</button>}
@@ -184,7 +184,6 @@ function dominantCategory(w: WorkoutSession, map: Map<string, Exercise>): Catego
 
 function TimelineCard({ w, map, units }: { w: WorkoutSession; map: Map<string, Exercise>; units: 'kg' | 'lb' }) {
   const cat = dominantCategory(w, map);
-  const colour = CATEGORY_COLOUR[cat];
   const names = w.exerciseOrder.map((id) => map.get(id)?.name).filter(Boolean);
   return (
     <li>
@@ -193,7 +192,7 @@ function TimelineCard({ w, map, units }: { w: WorkoutSession; map: Map<string, E
           {new Date(w.startedAt).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' })} · {fmtDuration(w.durationSec)}
         </p>
         <div className="mt-2 flex items-center gap-3">
-          <MuscleBadge colour={colour} cat={cat} />
+          <WorkoutThumb w={w} cat={cat} map={map} />
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{w.name}</p>
             <p className="flex flex-wrap items-center gap-x-3 text-sm text-muted">
@@ -210,17 +209,14 @@ function TimelineCard({ w, map, units }: { w: WorkoutSession; map: Map<string, E
   );
 }
 
-/** Original muscle-group glyph: a simple torso with the trained region filled. */
-function MuscleBadge({ colour, cat }: { colour: string; cat: Category }) {
-  const region = cat === 'legs' ? 'legs' : cat === 'pull' ? 'back' : cat === 'push' ? 'chest' : 'core';
-  return (
-    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" style={{ background: `color-mix(in srgb, ${colour} 16%, transparent)` }}>
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={colour} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <circle cx="12" cy="3.6" r="1.8" />
-        <path d="M8 7h8l1.5 6H6.5z" fill={region === 'chest' || region === 'back' ? colour : 'none'} fillOpacity={region === 'back' ? 0.55 : 0.9} />
-        <path d="M7 13h10l-1 2H8z" fill={region === 'core' ? colour : 'none'} />
-        <path d="M8.5 15l-1 7M15.5 15l1 7M12 15v6" stroke={colour} strokeWidth={region === 'legs' ? 2.6 : 1.6} />
-      </svg>
-    </div>
-  );
+/** The same body-map thumbnail as exercises, lit with every main muscle the workout's dominant group trained. */
+function WorkoutThumb({ w, cat, map }: { w: WorkoutSession; cat: Category; map: Map<string, Exercise> }) {
+  const exs = w.exerciseOrder.map((id) => map.get(id)).filter((e): e is Exercise => !!e);
+  const inCat = exs.filter((e) => e.category === cat);
+  const primaryMuscles = [...new Set((inCat.length ? inCat : exs).flatMap((e) => e.primaryMuscles))];
+  const stub: Exercise = {
+    id: w.id, name: w.name, category: cat, primaryMuscles, secondaryMuscles: [], equipment: [], isBodyweight: false,
+    defaultRestSec: 0, preference: 0, isCustom: false, archived: false, useCount: 0,
+  };
+  return <ExerciseThumb ex={stub} size={44} />;
 }

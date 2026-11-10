@@ -54,8 +54,10 @@ input[type="number"] { -moz-appearance: textfield; }
 /* Milestone level-up on the workout summary */
 @keyframes pop { from { transform: scale(.92); opacity: 0 } to { transform: scale(1); opacity: 1 } }
 .pop-in { animation: pop .5s cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+.fade-in { animation: fade-in .18s cubic-bezier(.16, 1, .3, 1); }
 @media (prefers-reduced-motion: reduce) {
-  .pop-in, .sheet-in, .rec-dot { animation: none; }
+  .pop-in, .sheet-in, .rec-dot, .fade-in { animation: none; }
   .motion-safe-transition { transition: none !important; }
 }
 

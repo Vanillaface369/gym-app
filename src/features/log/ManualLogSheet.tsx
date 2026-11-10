@@ -40,12 +40,16 @@ export function ManualLogSheet({ open, onClose }: { open: boolean; onClose: () =
   const field = 'mt-1 w-full rounded-xl bg-surface-2 px-3 py-3 text-ink outline-none focus:ring-2 focus:ring-accent';
   return (
     <Sheet open={open} onClose={onClose} title="Log a past workout">
-      <label className="block text-sm text-muted">Start from
-        <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className={field}>
-          <option value="">Blank workout</option>
-          {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-      </label>
+      <p id="manual-start-from" className="text-sm text-muted">Start from</p>
+      <div role="radiogroup" aria-labelledby="manual-start-from" className="mt-1 grid grid-cols-2 gap-2">
+        {[{ id: '', name: 'Blank workout', n: 0 }, ...templates.map((t) => ({ id: t.id, name: t.name, n: t.items.length }))].map((o) => (
+          <button key={o.id || 'blank'} type="button" role="radio" aria-checked={templateId === o.id} onClick={() => setTemplateId(o.id)}
+            className={`min-h-12 rounded-xl px-3 py-2 text-left ${templateId === o.id ? 'bg-accent/10 ring-1 ring-accent' : 'bg-surface-2'}`}>
+            <span className="block truncate text-sm font-semibold text-ink">{o.name}</span>
+            <span className="block text-xs text-muted">{o.id ? `${o.n} exercises` : 'Add exercises next'}</span>
+          </button>
+        ))}
+      </div>
       <label className="mt-3 block text-sm text-muted">Name
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder={templates.find((t) => t.id === templateId)?.name ?? 'Workout'} className={field} />
       </label>

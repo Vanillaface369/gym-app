@@ -104,7 +104,7 @@ export function PlanPage() {
           {(Object.keys(DEFAULT_STEPS) as StepKind[]).map((k) => (
             <Row key={k} label={STEP_LABEL[k]}>
               <div className="w-20">
-                <NumberField ariaLabel={`${STEP_LABEL[k]} step`} step={0.5} value={toDisplay(s.weightSteps?.[k] ?? DEFAULT_STEPS[k], s.units)}
+                <NumberField compact ariaLabel={`${STEP_LABEL[k]} step`} step={0.5} value={toDisplay(s.weightSteps?.[k] ?? DEFAULT_STEPS[k], s.units)}
                   onChange={(v) => v > 0 && updateSettings({ weightSteps: { ...s.weightSteps, [k]: fromDisplay(v, s.units) } })} />
               </div>
             </Row>

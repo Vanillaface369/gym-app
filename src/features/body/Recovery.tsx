@@ -77,7 +77,9 @@ export function Recovery() {
 
       <div className="relative mt-4">
         <div className="mx-auto h-[min(28rem,54vh)] aspect-[558/1161]">
-          <BodyMap side={side} colour={colour} pick={pick} selected={selected} onSelect={setSelected} />
+          <div key={side} className="fade-in h-full w-full">
+            <BodyMap side={side} colour={colour} pick={pick} selected={selected} onSelect={setSelected} />
+          </div>
         </div>
         <button onClick={() => setSide(side === 'front' ? 'back' : 'front')} aria-label={`Show ${side === 'front' ? 'back' : 'front'}`}
           className="absolute bottom-1 left-0 flex h-12 w-12 items-center justify-center rounded-full bg-surface active:scale-95">

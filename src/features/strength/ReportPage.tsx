@@ -96,7 +96,7 @@ function Card({ title, value, badge, sub, fileName, children }: { title: string;
   const on = (m: Muscle) => info.muscles.includes(m);
   return (
     <div ref={ref} className="relative overflow-hidden rounded-2xl bg-surface p-4">
-      <div className="pointer-events-none absolute top-10 -right-5 h-52 w-26 opacity-25">
+      <div className="pointer-events-none absolute top-14 right-4 h-20 w-10 opacity-60">
         <BodyMap side={info.side} selected={null} pick={(ms) => ms.find(on) ?? ms[0]}
           colour={(m) => (on(m) ? ACCENT : 'var(--color-line)')} />
       </div>

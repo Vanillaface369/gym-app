@@ -167,8 +167,10 @@ export function PageHeader({ left, title, right }: { left?: ReactNode; title?: R
   );
 }
 
-export function NumberField({ value, onChange, ariaLabel, step = 1, highlight, done, placeholder }: {
+export function NumberField({ value, onChange, ariaLabel, step = 1, highlight, done, placeholder, compact }: {
   value: number | ''; onChange: (n: number) => void; ariaLabel: string; step?: number; highlight?: boolean; done?: boolean; placeholder?: string;
+  /** Smaller text for settings rows; still 44px tall. */
+  compact?: boolean;
 }) {
   // Local text while focused: the store updates asynchronously, so a controlled value would drop keystrokes.
   const [text, setText] = useState<string | null>(null);
@@ -189,7 +191,7 @@ export function NumberField({ value, onChange, ariaLabel, step = 1, highlight, d
         const n = parseFloat(raw);
         onChange(Number.isFinite(n) ? n : 0);
       }}
-      className={`tabular w-full rounded-xl px-3 py-3 text-center text-lg font-semibold outline-none focus:ring-2 focus:ring-accent
+      className={`tabular w-full rounded-xl px-3 text-center outline-none focus:ring-2 focus:ring-accent ${compact ? 'min-h-11 py-2 text-base font-medium' : 'py-3 text-lg font-semibold'}
         ${done ? 'bg-accent/15 text-accent' : highlight ? 'bg-surface-2 ring-1 ring-accent/60' : 'bg-surface-2'}`}
     />
   );
