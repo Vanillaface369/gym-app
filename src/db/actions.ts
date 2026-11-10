@@ -80,12 +80,30 @@ async function buildItem(t: ItemPlan, settings: Settings): Promise<ActiveItem> {
   return { key: uid(), exerciseId: t.exerciseId, restSec: t.restSec, sets, ...(sug ? { progress: { kind: sug.kind, ...(sug.deltaKg !== undefined ? { deltaKg: sug.deltaKg } : {}) } } : {}) };
 }
 
+export const planKey = (it: { exerciseId: string; order: number }) => `${it.exerciseId}-${it.order}`;
+
+/** Swap in sets edited on the Workout tab for this template, if there are any. */
+function withPlanEdit(item: ActiveItem, templateId: string, key: string, settings: Settings): ActiveItem {
+  const edit = settings.planEdits?.templateId === templateId ? settings.planEdits.items[key] : undefined;
+  if (!edit?.length) return item;
+  return { ...item, edited: true, progress: undefined, sets: edit.map((s) => ({ ...s, done: false, isWarmup: false })) };
+}
+
 /** What each template item will look like when started (for the Workout tab preview), keyed `${exerciseId}-${order}`. */
 export async function previewItems(t: WorkoutTemplate): Promise<Map<string, ActiveItem>> {
   const settings = await getSettings();
   const out = new Map<string, ActiveItem>();
-  for (const it of t.items) out.set(`${it.exerciseId}-${it.order}`, await buildItem(it, settings));
+  for (const it of t.items) out.set(planKey(it), withPlanEdit(await buildItem(it, settings), t.id, planKey(it), settings));
   return out;
+}
+
+/** Save (or with null, clear) the sets for one exercise of the next workout. Edits for a different workout are dropped. */
+export async function setPlanEdit(templateId: string, key: string, sets: { reps: number; weightKg: number }[] | null) {
+  const s = await getSettings();
+  const items = s.planEdits?.templateId === templateId ? { ...s.planEdits.items } : {};
+  if (sets) items[key] = sets.map((x) => ({ reps: x.reps, weightKg: x.weightKg }));
+  else delete items[key];
+  await updateSettings({ planEdits: Object.keys(items).length ? { templateId, items } : undefined });
 }
 
 export async function itemForExercise(ex: Exercise): Promise<ActiveItem> {
@@ -182,8 +200,11 @@ export function customSplitTemplates(templates: WorkoutTemplate[]): WorkoutTempl
 export async function startWorkout(template: WorkoutTemplate): Promise<void> {
   const settings = await getSettings();
   const items: ActiveItem[] = [];
-  for (const t of [...template.items].sort((a, b) => a.order - b.order)) items.push(await buildItem(t, settings));
+  for (const t of [...template.items].sort((a, b) => a.order - b.order)) {
+    items.push(withPlanEdit(await buildItem(t, settings), template.id, planKey(t), settings));
+  }
   if (settings.warmups) await addWarmups(items, settings);
+  if (settings.planEdits) await updateSettings({ planEdits: undefined }); // used up: next time starts from progression again
   const active: ActiveWorkout = {
     id: 'current', name: template.name, templateId: template.id, splitDay: template.splitDay,
     startedAt: Date.now(), items, rest: null,

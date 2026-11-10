@@ -140,6 +140,11 @@ export interface Settings {
   benchmarkIds?: string[];
   /** Lifetime totals carried over from before this app (milestones). */
   lifetimeOffset: { workouts: number; volumeKg: number; calories: number };
+  /**
+   * Sets edited on the Workout tab for the next workout of one template, keyed `${exerciseId}-${order}`.
+   * Used when that workout starts, then cleared, so progression works as usual next time.
+   */
+  planEdits?: { templateId: string; items: Record<string, { reps: number; weightKg: number }[]> };
 }
 
 export interface RecoveryOverride {
@@ -163,6 +168,8 @@ export interface ActiveItem {
   maxEffort?: boolean;
   /** What progression suggested for this session (shown as e.g. "↑ +2.5 kg", "+1 rep"). */
   progress?: { kind: 'up' | 'reps' | 'deload'; deltaKg?: number };
+  /** The sets were changed by hand on the Workout tab before starting (progression no longer applies). */
+  edited?: boolean;
   sets: ActiveSet[];
 }
 export interface RestTimer {
