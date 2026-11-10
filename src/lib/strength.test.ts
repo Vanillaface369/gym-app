@@ -24,7 +24,8 @@ describe('strength score', () => {
   it('maps ratio to 0-100 with 50 at baseline', () => {
     expect(toScore(1)).toBe(50);
     expect(toScore(1.2)).toBe(60);
-    expect(toScore(3)).toBe(100);
+    expect(toScore(3)).toBe(150); // no cap at 100
+    expect(toScore(-1)).toBe(0);
   });
 
   it('averages sub-groups into groups and overall', () => {

@@ -37,7 +37,8 @@ export function exerciseRatio(points: Point[], asOf: number): number | null {
 }
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
-export const toScore = (ratio: number) => Math.max(0, Math.min(100, 50 * ratio));
+/** 50 = as strong as when you started, 100 = twice as strong. No upper cap: a capped score went flat once you'd doubled. */
+export const toScore = (ratio: number) => Math.max(0, 50 * ratio);
 
 export interface Scores {
   subs: Record<Sub, number | null>;

@@ -37,7 +37,8 @@ export function ReportPage() {
       />
       {data && (
         <div className="px-4">
-          <Heading title="Muscle strength" ranges={STRENGTH_RANGES} value={sRange} onChange={setSRange} />
+          <Heading title="Muscle strength" ranges={STRENGTH_RANGES} value={sRange} onChange={setSRange}
+            note="Strength score: 50 = as strong as when you started, 100 = twice as strong. Updates each week." />
           <Carousel label="Muscle strength">
             {SUBS.map((s) => <StrengthCard key={s.id} sub={s.id} data={data} range={sRange} />)}
           </Carousel>
@@ -52,10 +53,11 @@ export function ReportPage() {
   );
 }
 
-function Heading({ title, ranges, value, onChange }: { title: string; ranges: { id: Range; label: string }[]; value: Range; onChange: (r: Range) => void }) {
+function Heading({ title, ranges, value, onChange, note }: { title: string; ranges: { id: Range; label: string }[]; value: Range; onChange: (r: Range) => void; note?: string }) {
   return (
     <div className="mt-4 mb-2">
       <h2 className="text-lg font-semibold">{title}</h2>
+      {note && <p className="text-sm text-muted">{note}</p>}
       <div role="tablist" aria-label={`${title} range`} className="mt-2 flex gap-1 rounded-xl bg-surface p-1">
         {ranges.map((r) => (
           <button key={r.id} role="tab" aria-selected={r.id === value} onClick={() => onChange(r.id)}
@@ -125,10 +127,10 @@ function StrengthCard({ sub, data, range }: { sub: Sub; data: StrengthData; rang
   const from = rangeStart(range, Date.now());
   const pts = all.filter((p) => p.date >= from && p.value !== null);
   const now = all[all.length - 1].value;
-  // Fit the y axis to the data (in steps of 10, within 0-100) so small changes are visible.
+  // Fit the y axis to the data (in steps of 10, from 0 up) so small changes are visible.
   const vals = pts.map((p) => p.value as number);
   const lo = Math.max(0, Math.floor((Math.min(...vals) - 3) / 10) * 10);
-  const hi = Math.min(100, Math.ceil((Math.max(...vals) + 3) / 10) * 10);
+  const hi = Math.ceil((Math.max(...vals) + 3) / 10) * 10;
   const step = hi - lo > 40 ? 20 : hi - lo > 20 ? 10 : 5;
   const ticks = Array.from({ length: Math.floor((hi - lo) / step) + 1 }, (_, i) => lo + i * step);
   return (

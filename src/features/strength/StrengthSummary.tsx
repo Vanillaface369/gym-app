@@ -20,16 +20,26 @@ export function TrendBadge({ delta }: { delta: number | null }) {
   );
 }
 
-/** Striped 0-100 bar for the overall score. */
+/** Striped bar for the overall score on a 0-200 scale (4x where you started), with marks at 50 (start) and 100 (twice as strong). */
+const BAR_MAX = 200;
 function ScoreBar({ score }: { score: number | null }) {
+  const mark = (v: number) => `${(v / BAR_MAX) * 100}%`;
   return (
-    <div className="h-3 overflow-hidden rounded-full bg-surface-2">
-      {score !== null && (
-        <div className="h-full rounded-full" style={{
-          width: `${score}%`,
-          background: 'repeating-linear-gradient(-45deg, var(--color-accent) 0 6px, color-mix(in oklab, var(--color-accent) 70%, var(--color-bg)) 6px 12px)',
-        }} />
-      )}
+    <div>
+      <div className="relative h-3 overflow-hidden rounded-full bg-surface-2">
+        {score !== null && (
+          <div className="h-full rounded-full" style={{
+            width: mark(Math.min(score, BAR_MAX)),
+            background: 'repeating-linear-gradient(-45deg, var(--color-accent) 0 6px, color-mix(in oklab, var(--color-accent) 70%, var(--color-bg)) 6px 12px)',
+          }} />
+        )}
+        {[50, 100].map((v) => <span key={v} className="absolute inset-y-0 w-0.5 bg-bg" style={{ left: mark(v) }} />)}
+      </div>
+      <div className="relative mt-1 h-4 text-xs text-muted" aria-hidden>
+        <span className="absolute -translate-x-1/2" style={{ left: mark(50) }}>Start</span>
+        <span className="absolute -translate-x-1/2" style={{ left: mark(100) }}>2×</span>
+        <span className="absolute right-0">4×</span>
+      </div>
     </div>
   );
 }
@@ -49,12 +59,12 @@ export function StrengthSummary() {
           <p className="font-semibold">Strength score</p>
           <TrendBadge delta={trend(series.map((s) => s.overall))} />
         </div>
-        <p className="tabular mt-1 text-5xl font-bold">{now.overall ?? '–'}<span className="text-xl text-muted"> / 100</span></p>
+        <p className="tabular mt-1 text-5xl font-bold">{now.overall ?? '–'}</p>
         <div className="mt-3"><ScoreBar score={now.overall} /></div>
         <p className="mt-2 text-xs text-muted">
           {now.overall === null
             ? 'Your score appears after your first full week of training.'
-            : '50 is where you started; 100 is double. Updates each week.'}
+            : '50 = as strong as when you started, 100 = twice as strong. Updates each week.'}
         </p>
       </div>
 
